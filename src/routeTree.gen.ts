@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrackingRouteImport } from './routes/tracking'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as RateRouteImport } from './routes/rate'
 import { Route as ProposalsRouteImport } from './routes/proposals'
@@ -22,6 +23,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TrackingRoute = TrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestRoute = RequestRouteImport.update({
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
+  '/search': typeof SearchRoute
   '/tracking': typeof TrackingRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
+  '/search': typeof SearchRoute
   '/tracking': typeof TrackingRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
+  '/search': typeof SearchRoute
   '/tracking': typeof TrackingRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/rate'
     | '/request'
+    | '/search'
     | '/tracking'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/rate'
     | '/request'
+    | '/search'
     | '/tracking'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/proposals'
     | '/rate'
     | '/request'
+    | '/search'
     | '/tracking'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   ProposalsRoute: typeof ProposalsRoute
   RateRoute: typeof RateRoute
   RequestRoute: typeof RequestRoute
+  SearchRoute: typeof SearchRoute
   TrackingRoute: typeof TrackingRoute
 }
 
@@ -154,6 +167,13 @@ declare module '@tanstack/react-router' {
       path: '/tracking'
       fullPath: '/tracking'
       preLoaderRoute: typeof TrackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/request': {
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProposalsRoute: ProposalsRoute,
   RateRoute: RateRoute,
   RequestRoute: RequestRoute,
+  SearchRoute: SearchRoute,
   TrackingRoute: TrackingRoute,
 }
 export const routeTree = rootRouteImport
