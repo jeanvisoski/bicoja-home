@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrackingRouteImport } from './routes/tracking'
 import { Route as RequestRouteImport } from './routes/request'
+import { Route as RateRouteImport } from './routes/rate'
 import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as LoginRouteImport } from './routes/login'
@@ -26,6 +27,11 @@ const TrackingRoute = TrackingRouteImport.update({
 const RequestRoute = RequestRouteImport.update({
   id: '/request',
   path: '/request',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RateRoute = RateRouteImport.update({
+  id: '/rate',
+  path: '/rate',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProposalsRoute = ProposalsRouteImport.update({
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
   '/proposals': typeof ProposalsRoute
+  '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/tracking': typeof TrackingRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
   '/proposals': typeof ProposalsRoute
+  '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/tracking': typeof TrackingRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
   '/proposals': typeof ProposalsRoute
+  '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/tracking': typeof TrackingRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/payment'
     | '/proposals'
+    | '/rate'
     | '/request'
     | '/tracking'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/payment'
     | '/proposals'
+    | '/rate'
     | '/request'
     | '/tracking'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/payment'
     | '/proposals'
+    | '/rate'
     | '/request'
     | '/tracking'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PaymentRoute: typeof PaymentRoute
   ProposalsRoute: typeof ProposalsRoute
+  RateRoute: typeof RateRoute
   RequestRoute: typeof RequestRoute
   TrackingRoute: typeof TrackingRoute
 }
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/request'
       fullPath: '/request'
       preLoaderRoute: typeof RequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rate': {
+      id: '/rate'
+      path: '/rate'
+      fullPath: '/rate'
+      preLoaderRoute: typeof RateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/proposals': {
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PaymentRoute: PaymentRoute,
   ProposalsRoute: ProposalsRoute,
+  RateRoute: RateRoute,
   RequestRoute: RequestRoute,
   TrackingRoute: TrackingRoute,
 }
