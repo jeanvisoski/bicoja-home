@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrackingRouteImport } from './routes/tracking'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as PaymentRouteImport } from './routes/payment'
@@ -16,6 +17,11 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TrackingRoute = TrackingRouteImport.update({
+  id: '/tracking',
+  path: '/tracking',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RequestRoute = RequestRouteImport.update({
   id: '/request',
   path: '/request',
@@ -54,6 +60,7 @@ export interface FileRoutesByFullPath {
   '/payment': typeof PaymentRoute
   '/proposals': typeof ProposalsRoute
   '/request': typeof RequestRoute
+  '/tracking': typeof TrackingRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +69,7 @@ export interface FileRoutesByTo {
   '/payment': typeof PaymentRoute
   '/proposals': typeof ProposalsRoute
   '/request': typeof RequestRoute
+  '/tracking': typeof TrackingRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,12 +79,27 @@ export interface FileRoutesById {
   '/payment': typeof PaymentRoute
   '/proposals': typeof ProposalsRoute
   '/request': typeof RequestRoute
+  '/tracking': typeof TrackingRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/home' | '/login' | '/payment' | '/proposals' | '/request'
+  fullPaths:
+    | '/'
+    | '/home'
+    | '/login'
+    | '/payment'
+    | '/proposals'
+    | '/request'
+    | '/tracking'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/home' | '/login' | '/payment' | '/proposals' | '/request'
+  to:
+    | '/'
+    | '/home'
+    | '/login'
+    | '/payment'
+    | '/proposals'
+    | '/request'
+    | '/tracking'
   id:
     | '__root__'
     | '/'
@@ -85,6 +108,7 @@ export interface FileRouteTypes {
     | '/payment'
     | '/proposals'
     | '/request'
+    | '/tracking'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,10 +118,18 @@ export interface RootRouteChildren {
   PaymentRoute: typeof PaymentRoute
   ProposalsRoute: typeof ProposalsRoute
   RequestRoute: typeof RequestRoute
+  TrackingRoute: typeof TrackingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tracking': {
+      id: '/tracking'
+      path: '/tracking'
+      fullPath: '/tracking'
+      preLoaderRoute: typeof TrackingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/request': {
       id: '/request'
       path: '/request'
@@ -150,6 +182,7 @@ const rootRouteChildren: RootRouteChildren = {
   PaymentRoute: PaymentRoute,
   ProposalsRoute: ProposalsRoute,
   RequestRoute: RequestRoute,
+  TrackingRoute: TrackingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
