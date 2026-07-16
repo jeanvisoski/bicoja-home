@@ -15,6 +15,7 @@ import { Route as RequestRouteImport } from './routes/request'
 import { Route as RateRouteImport } from './routes/rate'
 import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ProRouteImport } from './routes/pro'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as MessagesRouteImport } from './routes/messages'
@@ -51,6 +52,11 @@ const ProposalsRoute = ProposalsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProRoute = ProRouteImport.update({
+  id: '/pro',
+  path: '/pro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PaymentRoute = PaymentRouteImport.update({
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
+  '/pro': typeof ProRoute
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
@@ -112,6 +119,7 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
+  '/pro': typeof ProRoute
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
@@ -128,6 +136,7 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
+  '/pro': typeof ProRoute
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/orders'
     | '/payment'
+    | '/pro'
     | '/profile'
     | '/proposals'
     | '/rate'
@@ -160,6 +170,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/orders'
     | '/payment'
+    | '/pro'
     | '/profile'
     | '/proposals'
     | '/rate'
@@ -175,6 +186,7 @@ export interface FileRouteTypes {
     | '/messages'
     | '/orders'
     | '/payment'
+    | '/pro'
     | '/profile'
     | '/proposals'
     | '/rate'
@@ -191,6 +203,7 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   OrdersRoute: typeof OrdersRoute
   PaymentRoute: typeof PaymentRoute
+  ProRoute: typeof ProRoute
   ProfileRoute: typeof ProfileRoute
   ProposalsRoute: typeof ProposalsRoute
   RateRoute: typeof RateRoute
@@ -241,6 +254,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pro': {
+      id: '/pro'
+      path: '/pro'
+      fullPath: '/pro'
+      preLoaderRoute: typeof ProRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/payment': {
@@ -303,6 +323,7 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   OrdersRoute: OrdersRoute,
   PaymentRoute: PaymentRoute,
+  ProRoute: ProRoute,
   ProfileRoute: ProfileRoute,
   ProposalsRoute: ProposalsRoute,
   RateRoute: RateRoute,
