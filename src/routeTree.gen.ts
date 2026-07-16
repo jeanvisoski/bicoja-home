@@ -23,6 +23,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as ConfirmRouteImport } from './routes/confirm'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProIndexRouteImport } from './routes/pro.index'
 
 const TrackingRoute = TrackingRouteImport.update({
   id: '/tracking',
@@ -94,6 +95,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProIndexRoute = ProIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -103,13 +109,14 @@ export interface FileRoutesByFullPath {
   '/messages': typeof MessagesRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
-  '/pro': typeof ProRoute
+  '/pro': typeof ProRouteWithChildren
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/search': typeof SearchRoute
   '/tracking': typeof TrackingRoute
+  '/pro/': typeof ProIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -119,13 +126,13 @@ export interface FileRoutesByTo {
   '/messages': typeof MessagesRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
-  '/pro': typeof ProRoute
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/search': typeof SearchRoute
   '/tracking': typeof TrackingRoute
+  '/pro': typeof ProIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -136,13 +143,14 @@ export interface FileRoutesById {
   '/messages': typeof MessagesRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
-  '/pro': typeof ProRoute
+  '/pro': typeof ProRouteWithChildren
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/search': typeof SearchRoute
   '/tracking': typeof TrackingRoute
+  '/pro/': typeof ProIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -161,6 +169,7 @@ export interface FileRouteTypes {
     | '/request'
     | '/search'
     | '/tracking'
+    | '/pro/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -170,13 +179,13 @@ export interface FileRouteTypes {
     | '/messages'
     | '/orders'
     | '/payment'
-    | '/pro'
     | '/profile'
     | '/proposals'
     | '/rate'
     | '/request'
     | '/search'
     | '/tracking'
+    | '/pro'
   id:
     | '__root__'
     | '/'
@@ -193,6 +202,7 @@ export interface FileRouteTypes {
     | '/request'
     | '/search'
     | '/tracking'
+    | '/pro/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -203,7 +213,7 @@ export interface RootRouteChildren {
   MessagesRoute: typeof MessagesRoute
   OrdersRoute: typeof OrdersRoute
   PaymentRoute: typeof PaymentRoute
-  ProRoute: typeof ProRoute
+  ProRoute: typeof ProRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ProposalsRoute: typeof ProposalsRoute
   RateRoute: typeof RateRoute
@@ -312,8 +322,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pro/': {
+      id: '/pro/'
+      path: '/'
+      fullPath: '/pro/'
+      preLoaderRoute: typeof ProIndexRouteImport
+      parentRoute: typeof ProRoute
+    }
   }
 }
+
+interface ProRouteChildren {
+  ProIndexRoute: typeof ProIndexRoute
+}
+
+const ProRouteChildren: ProRouteChildren = {
+  ProIndexRoute: ProIndexRoute,
+}
+
+const ProRouteWithChildren = ProRoute._addFileChildren(ProRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -323,7 +350,7 @@ const rootRouteChildren: RootRouteChildren = {
   MessagesRoute: MessagesRoute,
   OrdersRoute: OrdersRoute,
   PaymentRoute: PaymentRoute,
-  ProRoute: ProRoute,
+  ProRoute: ProRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ProposalsRoute: ProposalsRoute,
   RateRoute: RateRoute,
