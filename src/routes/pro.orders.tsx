@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Wrench,
@@ -178,6 +178,71 @@ function ProOrder() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const locationWatchRef = useRef<number | null>(null);
+  const lastLocationSentRef = useRef(0);
+
+  async function publishLiveLocation(position: GeolocationPosition, force = false) {
+    if (!session || !orderId) return false;
+    const now = Date.now();
+    if (!force && now - lastLocationSentRef.current < 10_000) return true;
+    const { latitude, longitude, accuracy } = position.coords;
+    const { error } = await supabase.from("order_provider_locations").upsert(
+      {
+        order_id: orderId,
+        provider_id: session.user.id,
+        lat: latitude,
+        lng: longitude,
+        accuracy_meters: Number.isFinite(accuracy) ? accuracy : null,
+      },
+      { onConflict: "order_id" },
+    );
+    if (error) {
+      if (force) toast.error(`NÃ£o foi possÃ­vel compartilhar sua localizaÃ§Ã£o: ${error.message}`);
+      return false;
+    }
+    lastLocationSentRef.current = now;
+    return true;
+  }
+
+  function stopLiveTracking() {
+    if (locationWatchRef.current != null) navigator.geolocation.clearWatch(locationWatchRef.current);
+    locationWatchRef.current = null;
+  }
+
+  async function startLiveTracking(showError = false) {
+    if (!orderId || !session || !navigator.geolocation) {
+      if (showError) toast.error("Ative a localizaÃ§Ã£o do aparelho para compartilhar o deslocamento.");
+      return false;
+    }
+    const initialPosition = await new Promise<GeolocationPosition | null>((resolve) => {
+      navigator.geolocation.getCurrentPosition(resolve, () => resolve(null), {
+        enableHighAccuracy: true,
+        timeout: 15_000,
+        maximumAge: 10_000,
+      });
+    });
+    if (!initialPosition) {
+      if (showError) toast.error("NÃ£o foi possÃ­vel obter sua localizaÃ§Ã£o. Verifique a permissÃ£o do GPS.");
+      return false;
+    }
+    const saved = await publishLiveLocation(initialPosition, true);
+    if (!saved) return false;
+    if (locationWatchRef.current == null) {
+      locationWatchRef.current = navigator.geolocation.watchPosition(
+        (position) => void publishLiveLocation(position),
+        () => undefined,
+        { enableHighAccuracy: true, timeout: 20_000, maximumAge: 10_000 },
+      );
+    }
+    return true;
+  }
+
+  useEffect(() => {
+    if (order?.status === "a_caminho") void startLiveTracking();
+    else stopLiveTracking();
+    return stopLiveTracking;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.status, orderId, session?.user.id]);
 
   async function handlePickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -223,17 +288,17 @@ function ProOrder() {
   }
 
   async function advanceOrder(nextStatus: string, eventNote?: string) {
-    if (!orderId) return;
+    if (!orderId) return false;
     if (nextStatus === "fotos_enviadas" && photos.length === 0) {
       toast.error("Envie ao menos uma foto do serviço concluído antes de finalizar.");
-      return;
+      return false;
     }
     let amount: number | null = null;
     if (nextStatus === "fotos_enviadas") {
       amount = Number(finalPrice);
       if (!amount || !order || amount < Number(order.quoted_price_min) || amount > Number(order.quoted_price_max)) {
         toast.error(`Informe o valor final dentro do orçamento aceito: R$ ${Number(order?.quoted_price_min ?? 0).toFixed(2)} a R$ ${Number(order?.quoted_price_max ?? 0).toFixed(2)}.`);
-        return;
+        return false;
       }
     }
     setSending(true);
@@ -244,7 +309,7 @@ function ProOrder() {
       if (photosError) {
         setSending(false);
         toast.error(photosError.message);
-        return;
+        return false;
       }
     }
     const { error } = await supabase.rpc("transition_order", {
@@ -260,6 +325,18 @@ function ProOrder() {
     }
     if (nextStatus === "fotos_enviadas") toast.success("Fotos enviadas ao cliente para confirmação.");
     queryClient.invalidateQueries({ queryKey: ["pro-order", orderId] });
+    if (nextStatus === "executando") {
+      stopLiveTracking();
+      await supabase.from("order_provider_locations").delete().eq("order_id", orderId);
+    }
+    return true;
+  }
+
+  async function markOnTheWay() {
+    const transitioned = await advanceOrder("a_caminho", "Prestador informou que estÃ¡ a caminho.");
+    if (!transitioned) return;
+    const locationStarted = await startLiveTracking(true);
+    if (!locationStarted) toast.warning("O pedido estÃ¡ a caminho, mas a localizaÃ§Ã£o ao vivo nÃ£o pÃ´de ser iniciada.");
   }
 
   // Modo "receber": ver uma solicitação aberta e enviar orçamento (ainda não é um pedido).
@@ -442,7 +519,7 @@ function ProOrder() {
         <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-background/0 pt-8 space-y-2">
           {status === "aceito" && (
             <button
-              onClick={() => advanceOrder("a_caminho", "Prestador informou que está a caminho.")}
+              onClick={markOnTheWay}
               disabled={sending}
               className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 shadow-card disabled:opacity-50"
             >

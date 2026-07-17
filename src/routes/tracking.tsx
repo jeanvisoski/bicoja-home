@@ -50,6 +50,11 @@ type OrderTracking = {
     lat: number | null;
     lng: number | null;
   } | null;
+  order_provider_locations: {
+    lat: number;
+    lng: number;
+    updated_at: string;
+  } | null;
 };
 
 function useOrder(orderId: string | undefined) {
@@ -59,7 +64,7 @@ function useOrder(orderId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, status, service_requests(description, service_categories(label), addresses(lat, lng)), provider_profiles(profiles(full_name, avatar_url), rating_avg, rating_count, lat, lng)",
+          "id, status, service_requests(description, service_categories(label), addresses(lat, lng)), provider_profiles(profiles(full_name, avatar_url), rating_avg, rating_count, lat, lng), order_provider_locations(lat, lng, updated_at)",
         )
         .eq("id", orderId)
         .returns<OrderTracking[]>()
@@ -68,6 +73,7 @@ function useOrder(orderId: string | undefined) {
       return data;
     },
     enabled: !!orderId,
+    refetchInterval: 10_000,
   });
 }
 
@@ -85,8 +91,10 @@ function Tracking() {
   const providerName = provider?.profiles?.full_name ?? "Prestador";
   const canReviewCompletion = order?.status === "fotos_enviadas" || order?.status === "aguardando_confirmacao";
   const address = order?.service_requests?.addresses;
-  const mapLat = address?.lat ?? provider?.lat ?? null;
-  const mapLng = address?.lng ?? provider?.lng ?? null;
+  const liveLocation = order?.status === "a_caminho" ? order.order_provider_locations : null;
+  const mapLat = address?.lat ?? liveLocation?.lat ?? provider?.lat ?? null;
+  const mapLng = address?.lng ?? liveLocation?.lng ?? provider?.lng ?? null;
+  const showLiveProvider = address?.lat != null && address?.lng != null && liveLocation != null;
   const trackingMessage: Record<string, string> = {
     aceito: "Pedido confirmado. Aguarde o prestador informar a saída.",
     a_caminho: `${providerName} está a caminho`,
@@ -108,7 +116,13 @@ function Tracking() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="relative h-56 overflow-hidden">
-          <MapView lat={mapLat} lng={mapLng} height={224} />
+          <MapView
+            lat={mapLat}
+            lng={mapLng}
+            secondaryLat={showLiveProvider ? liveLocation.lat : null}
+            secondaryLng={showLiveProvider ? liveLocation.lng : null}
+            height={224}
+          />
           <div className="absolute bottom-3 left-3 right-3 bg-background/95 backdrop-blur rounded-2xl p-3 shadow-card flex items-center gap-2 text-xs">
             <div className="h-2 w-2 rounded-full bg-trust animate-pulse" />
             <span className="font-semibold">{trackingMessage[order?.status ?? ""] ?? "Atualizando pedido..."}</span>
