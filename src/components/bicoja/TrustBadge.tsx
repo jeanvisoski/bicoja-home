@@ -7,14 +7,16 @@ const map: Record<string, { icon: ComponentType<{ className?: string }>; label: 
   support: { icon: Headphones, label: "Suporte humano" },
   mediation: { icon: Scale, label: "Mediação de conflitos" },
   reviews: { icon: Star, label: "Avaliações reais" },
-  shield: { icon: ShieldCheck, label: "Garantia CONFIA" },
+  shield: { icon: ShieldCheck, label: "Garantia BICOJÁ" },
 };
 
 export function TrustBadge({ kind, size = "sm" }: { kind: keyof typeof map; size?: "sm" | "md" }) {
   const { icon: Icon, label } = map[kind];
   const cls = size === "md" ? "text-sm px-3 py-1.5" : "text-xs px-2.5 py-1";
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full bg-trust-soft text-trust font-medium ${cls}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full bg-trust-soft text-trust font-medium ${cls}`}
+    >
       <Icon className="h-3.5 w-3.5" />
       {label}
     </span>

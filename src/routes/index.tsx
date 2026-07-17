@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ShieldCheck, Lock, BadgeCheck, ChevronRight } from "lucide-react";
-import { PhoneFrame } from "@/components/confia/PhoneFrame";
+import { ChevronRight } from "lucide-react";
+import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
+import { BrandLogo } from "@/components/bicoja/BrandLogo";
 
 export const Route = createFileRoute("/")({
   component: Onboarding,
@@ -10,21 +11,18 @@ export const Route = createFileRoute("/")({
 
 const slides = [
   {
-    icon: ShieldCheck,
-    eyebrow: "Bem-vindo à CONFIA",
+    eyebrow: "Bem-vindo à BICOJÁ",
     title: "Contrate profissionais com segurança.",
     body: "Eletricistas, encanadores, diaristas e mais — verificados, avaliados e prontos para atender.",
     tint: "from-primary to-primary/70",
   },
   {
-    icon: Lock,
     eyebrow: "Pagamento protegido",
     title: "Seu dinheiro só é liberado quando o serviço termina.",
-    body: "A CONFIA guarda o valor até você confirmar que ficou tudo certo. Sem surpresas.",
+    body: "A BICOJÁ guarda o valor até você confirmar que ficou tudo certo. Sem surpresas.",
     tint: "from-trust to-trust/70",
   },
   {
-    icon: BadgeCheck,
     eyebrow: "Prestadores verificados",
     title: "Cada profissional passa por checagem.",
     body: "Identidade, documentos e reputação conferidos. Aqui só entra quem inspira confiança.",
@@ -35,15 +33,12 @@ const slides = [
 function Onboarding() {
   const [i, setI] = useState(0);
   const S = slides[i];
-  const Icon = S.icon;
   const last = i === slides.length - 1;
   return (
     <PhoneFrame>
       <div className="flex-1 flex flex-col px-6 pt-10 pb-8">
         <div className="flex items-center justify-between">
-          <span className="text-lg font-extrabold tracking-tight">
-            <span className="text-primary">CON</span>FIA
-          </span>
+          <BrandLogo variant="lockup" className="h-16 w-32" />
           {!last && (
             <Link to="/login" className="text-sm text-muted-foreground font-medium">
               Pular
@@ -51,13 +46,19 @@ function Onboarding() {
           )}
         </div>
 
-        <div key={i} className="flex-1 flex flex-col items-center justify-center text-center animate-float-up">
-          <div className={`relative h-56 w-56 rounded-[40%] bg-gradient-to-br ${S.tint} flex items-center justify-center shadow-float mb-10`}>
-            <div className="absolute inset-3 rounded-[38%] bg-background/10 backdrop-blur-sm" />
-            <Icon className="relative h-24 w-24 text-primary-foreground" strokeWidth={1.5} />
+        <div
+          key={i}
+          className="flex-1 flex flex-col items-center justify-center text-center animate-float-up"
+        >
+          <div className={`h-56 w-56 rounded-[40%] bg-gradient-to-br ${S.tint} flex items-center justify-center shadow-float mb-10 overflow-hidden`}>
+            <BrandLogo variant="full" className="h-full w-full scale-[1.25]" />
           </div>
-          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">{S.eyebrow}</p>
-          <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground mb-4 font-[Manrope]">{S.title}</h2>
+          <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">
+            {S.eyebrow}
+          </p>
+          <h2 className="text-3xl font-extrabold leading-tight tracking-tight text-foreground mb-4 font-[Manrope]">
+            {S.title}
+          </h2>
           <p className="text-base text-muted-foreground max-w-xs">{S.body}</p>
         </div>
 

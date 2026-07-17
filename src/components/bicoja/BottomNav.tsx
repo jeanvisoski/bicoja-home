@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Search, ClipboardList, MessageCircle, User, LayoutDashboard, Calendar } from "lucide-react";
+import { Home, Search, ClipboardList, MessageCircle, User, LayoutDashboard, Wallet } from "lucide-react";
 import type { ComponentType } from "react";
 
 type Item = { to: string; label: string; icon: ComponentType<{ className?: string }> };
@@ -15,7 +15,7 @@ const clientItems: Item[] = [
 const proItems: Item[] = [
   { to: "/pro", label: "Painel", icon: LayoutDashboard },
   { to: "/pro/orders", label: "Pedidos", icon: ClipboardList },
-  { to: "/pro/schedule", label: "Agenda", icon: Calendar },
+  { to: "/pro/wallet", label: "Carteira", icon: Wallet },
   { to: "/messages", label: "Mensagens", icon: MessageCircle },
   { to: "/pro/profile", label: "Perfil", icon: User },
 ];

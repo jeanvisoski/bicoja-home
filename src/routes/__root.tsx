@@ -4,13 +4,54 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
+  useNavigate,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { SessionProvider, useSession } from "../lib/session-context";
+import { supabase } from "../lib/supabase";
+import { Toaster } from "../components/ui/sonner";
+
+const PUBLIC_PATHS = new Set(["/", "/login"]);
+
+function AuthGate({ children }: { children: ReactNode }) {
+  const { session, loading } = useSession();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const isPublic = PUBLIC_PATHS.has(pathname);
+  const [deactivated, setDeactivated] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !session && !isPublic) {
+      navigate({ to: "/login" });
+    }
+  }, [loading, session, isPublic, navigate]);
+
+  useEffect(() => {
+    if (!session) return;
+    supabase
+      .from("profiles")
+      .select("is_active")
+      .eq("id", session.user.id)
+      .single()
+      .then(async ({ data }) => {
+        if (data && data.is_active === false) {
+          setDeactivated(true);
+          await supabase.auth.signOut();
+          navigate({ to: "/login" });
+        }
+      });
+  }, [session, navigate]);
+
+  if (!loading && !session && !isPublic) return null;
+  if (deactivated) return null;
+  return <>{children}</>;
+}
 
 function NotFoundComponent() {
   return (
@@ -77,23 +118,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "CONFIA — Serviços domésticos com confiança" },
-      { name: "description", content: "Contrate eletricistas, encanadores, diaristas e mais com pagamento protegido e prestadores verificados." },
-      { name: "author", content: "CONFIA" },
-      { property: "og:title", content: "CONFIA — Serviços domésticos com confiança" },
-      { property: "og:description", content: "Pagamento protegido, prestadores verificados e suporte humano. Contrate em minutos." },
+      { title: "BICOJÁ — Serviços domésticos com confiança" },
+      {
+        name: "description",
+        content:
+          "Contrate eletricistas, encanadores, diaristas e mais com pagamento protegido e prestadores verificados.",
+      },
+      { name: "author", content: "BICOJÁ" },
+      { property: "og:title", content: "BICOJÁ — Serviços domésticos com confiança" },
+      {
+        property: "og:description",
+        content:
+          "Pagamento protegido, prestadores verificados e suporte humano. Contrate em minutos.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "theme-color", content: "#12328b" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/bicaja-logo.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -104,7 +158,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>
@@ -119,10 +173,19 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <SessionProvider>
+        <AuthGate>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </AuthGate>
+        <Toaster position="top-center" />
+      </SessionProvider>
     </QueryClientProvider>
   );
 }

@@ -1,0 +1,13 @@
+{
+  "name": "BICOJÁ",
+  "short_name": "BICOJÁ",
+  "description": "Serviços confiáveis perto de você.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#12328b",
+  "icons": [
+    { "src": "/bicaja-logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/bicaja-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

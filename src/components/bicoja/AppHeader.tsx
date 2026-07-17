@@ -1,6 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
+import { BrandLogo } from "./BrandLogo";
 
 export function AppHeader({
   title,
@@ -30,6 +31,7 @@ export function AppHeader({
         ) : (
           <div className="w-2" />
         )}
+        <BrandLogo className="h-9 w-9" />
         <div className="flex-1 min-w-0">
           {title && <h1 className="text-base font-semibold truncate">{title}</h1>}
           {subtitle && <p className="text-xs text-muted-foreground truncate">{subtitle}</p>}

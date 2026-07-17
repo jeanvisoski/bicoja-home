@@ -10,20 +10,30 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TrackingRouteImport } from './routes/tracking'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as RequestEditRouteImport } from './routes/request-edit'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as RateRouteImport } from './routes/rate'
 import { Route as ProposalsRouteImport } from './routes/proposals'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProRouteImport } from './routes/pro'
+import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MessagesRouteImport } from './routes/messages'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HomeRouteImport } from './routes/home'
+import { Route as HelpRouteImport } from './routes/help'
 import { Route as ConfirmRouteImport } from './routes/confirm'
+import { Route as AddressesRouteImport } from './routes/addresses'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProIndexRouteImport } from './routes/pro.index'
+import { Route as ProvidersProviderIdRouteImport } from './routes/providers.$providerId'
+import { Route as ProWalletRouteImport } from './routes/pro.wallet'
 import { Route as ProScheduleRouteImport } from './routes/pro.schedule'
 import { Route as ProProfileRouteImport } from './routes/pro.profile'
 import { Route as ProOrdersRouteImport } from './routes/pro.orders'
@@ -33,9 +43,29 @@ const TrackingRoute = TrackingRouteImport.update({
   path: '/tracking',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequestEditRoute = RequestEditRouteImport.update({
+  id: '/request-edit',
+  path: '/request-edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestRoute = RequestRouteImport.update({
@@ -63,6 +93,11 @@ const ProRoute = ProRouteImport.update({
   path: '/pro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaymentsRoute = PaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PaymentRoute = PaymentRouteImport.update({
   id: '/payment',
   path: '/payment',
@@ -71,6 +106,11 @@ const PaymentRoute = PaymentRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MessagesRoute = MessagesRouteImport.update({
@@ -88,9 +128,19 @@ const HomeRoute = HomeRouteImport.update({
   path: '/home',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HelpRoute = HelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ConfirmRoute = ConfirmRouteImport.update({
   id: '/confirm',
   path: '/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AddressesRoute = AddressesRouteImport.update({
+  id: '/addresses',
+  path: '/addresses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -101,6 +151,16 @@ const IndexRoute = IndexRouteImport.update({
 const ProIndexRoute = ProIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => ProRoute,
+} as any)
+const ProvidersProviderIdRoute = ProvidersProviderIdRouteImport.update({
+  id: '/providers/$providerId',
+  path: '/providers/$providerId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProWalletRoute = ProWalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
   getParentRoute: () => ProRoute,
 } as any)
 const ProScheduleRoute = ProScheduleRouteImport.update({
@@ -121,141 +181,210 @@ const ProOrdersRoute = ProOrdersRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/addresses': typeof AddressesRoute
   '/confirm': typeof ConfirmRoute
+  '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
+  '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
+  '/payments': typeof PaymentsRoute
   '/pro': typeof ProRouteWithChildren
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
+  '/request-edit': typeof RequestEditRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/tracking': typeof TrackingRoute
   '/pro/orders': typeof ProOrdersRoute
   '/pro/profile': typeof ProProfileRoute
   '/pro/schedule': typeof ProScheduleRoute
+  '/pro/wallet': typeof ProWalletRoute
+  '/providers/$providerId': typeof ProvidersProviderIdRoute
   '/pro/': typeof ProIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/addresses': typeof AddressesRoute
   '/confirm': typeof ConfirmRoute
+  '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
+  '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
+  '/payments': typeof PaymentsRoute
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
+  '/request-edit': typeof RequestEditRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/tracking': typeof TrackingRoute
   '/pro/orders': typeof ProOrdersRoute
   '/pro/profile': typeof ProProfileRoute
   '/pro/schedule': typeof ProScheduleRoute
+  '/pro/wallet': typeof ProWalletRoute
+  '/providers/$providerId': typeof ProvidersProviderIdRoute
   '/pro': typeof ProIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/addresses': typeof AddressesRoute
   '/confirm': typeof ConfirmRoute
+  '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
   '/messages': typeof MessagesRoute
+  '/notifications': typeof NotificationsRoute
   '/orders': typeof OrdersRoute
   '/payment': typeof PaymentRoute
+  '/payments': typeof PaymentsRoute
   '/pro': typeof ProRouteWithChildren
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
+  '/request-edit': typeof RequestEditRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
+  '/security': typeof SecurityRoute
+  '/terms': typeof TermsRoute
   '/tracking': typeof TrackingRoute
   '/pro/orders': typeof ProOrdersRoute
   '/pro/profile': typeof ProProfileRoute
   '/pro/schedule': typeof ProScheduleRoute
+  '/pro/wallet': typeof ProWalletRoute
+  '/providers/$providerId': typeof ProvidersProviderIdRoute
   '/pro/': typeof ProIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/addresses'
     | '/confirm'
+    | '/help'
     | '/home'
     | '/login'
     | '/messages'
+    | '/notifications'
     | '/orders'
     | '/payment'
+    | '/payments'
     | '/pro'
     | '/profile'
     | '/proposals'
     | '/rate'
     | '/request'
+    | '/request-edit'
+    | '/reset-password'
     | '/search'
+    | '/security'
+    | '/terms'
     | '/tracking'
     | '/pro/orders'
     | '/pro/profile'
     | '/pro/schedule'
+    | '/pro/wallet'
+    | '/providers/$providerId'
     | '/pro/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/addresses'
     | '/confirm'
+    | '/help'
     | '/home'
     | '/login'
     | '/messages'
+    | '/notifications'
     | '/orders'
     | '/payment'
+    | '/payments'
     | '/profile'
     | '/proposals'
     | '/rate'
     | '/request'
+    | '/request-edit'
+    | '/reset-password'
     | '/search'
+    | '/security'
+    | '/terms'
     | '/tracking'
     | '/pro/orders'
     | '/pro/profile'
     | '/pro/schedule'
+    | '/pro/wallet'
+    | '/providers/$providerId'
     | '/pro'
   id:
     | '__root__'
     | '/'
+    | '/addresses'
     | '/confirm'
+    | '/help'
     | '/home'
     | '/login'
     | '/messages'
+    | '/notifications'
     | '/orders'
     | '/payment'
+    | '/payments'
     | '/pro'
     | '/profile'
     | '/proposals'
     | '/rate'
     | '/request'
+    | '/request-edit'
+    | '/reset-password'
     | '/search'
+    | '/security'
+    | '/terms'
     | '/tracking'
     | '/pro/orders'
     | '/pro/profile'
     | '/pro/schedule'
+    | '/pro/wallet'
+    | '/providers/$providerId'
     | '/pro/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AddressesRoute: typeof AddressesRoute
   ConfirmRoute: typeof ConfirmRoute
+  HelpRoute: typeof HelpRoute
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
   MessagesRoute: typeof MessagesRoute
+  NotificationsRoute: typeof NotificationsRoute
   OrdersRoute: typeof OrdersRoute
   PaymentRoute: typeof PaymentRoute
+  PaymentsRoute: typeof PaymentsRoute
   ProRoute: typeof ProRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ProposalsRoute: typeof ProposalsRoute
   RateRoute: typeof RateRoute
   RequestRoute: typeof RequestRoute
+  RequestEditRoute: typeof RequestEditRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
+  SecurityRoute: typeof SecurityRoute
+  TermsRoute: typeof TermsRoute
   TrackingRoute: typeof TrackingRoute
+  ProvidersProviderIdRoute: typeof ProvidersProviderIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -267,11 +396,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/search': {
       id: '/search'
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/request-edit': {
+      id: '/request-edit'
+      path: '/request-edit'
+      fullPath: '/request-edit'
+      preLoaderRoute: typeof RequestEditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/request': {
@@ -309,6 +466,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/payments': {
+      id: '/payments'
+      path: '/payments'
+      fullPath: '/payments'
+      preLoaderRoute: typeof PaymentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/payment': {
       id: '/payment'
       path: '/payment'
@@ -321,6 +485,13 @@ declare module '@tanstack/react-router' {
       path: '/orders'
       fullPath: '/orders'
       preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/messages': {
@@ -344,11 +515,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HomeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/help': {
+      id: '/help'
+      path: '/help'
+      fullPath: '/help'
+      preLoaderRoute: typeof HelpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/confirm': {
       id: '/confirm'
       path: '/confirm'
       fullPath: '/confirm'
       preLoaderRoute: typeof ConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/addresses': {
+      id: '/addresses'
+      path: '/addresses'
+      fullPath: '/addresses'
+      preLoaderRoute: typeof AddressesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -363,6 +548,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/pro/'
       preLoaderRoute: typeof ProIndexRouteImport
+      parentRoute: typeof ProRoute
+    }
+    '/providers/$providerId': {
+      id: '/providers/$providerId'
+      path: '/providers/$providerId'
+      fullPath: '/providers/$providerId'
+      preLoaderRoute: typeof ProvidersProviderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pro/wallet': {
+      id: '/pro/wallet'
+      path: '/wallet'
+      fullPath: '/pro/wallet'
+      preLoaderRoute: typeof ProWalletRouteImport
       parentRoute: typeof ProRoute
     }
     '/pro/schedule': {
@@ -393,6 +592,7 @@ interface ProRouteChildren {
   ProOrdersRoute: typeof ProOrdersRoute
   ProProfileRoute: typeof ProProfileRoute
   ProScheduleRoute: typeof ProScheduleRoute
+  ProWalletRoute: typeof ProWalletRoute
   ProIndexRoute: typeof ProIndexRoute
 }
 
@@ -400,6 +600,7 @@ const ProRouteChildren: ProRouteChildren = {
   ProOrdersRoute: ProOrdersRoute,
   ProProfileRoute: ProProfileRoute,
   ProScheduleRoute: ProScheduleRoute,
+  ProWalletRoute: ProWalletRoute,
   ProIndexRoute: ProIndexRoute,
 }
 
@@ -407,20 +608,39 @@ const ProRouteWithChildren = ProRoute._addFileChildren(ProRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AddressesRoute: AddressesRoute,
   ConfirmRoute: ConfirmRoute,
+  HelpRoute: HelpRoute,
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,
   MessagesRoute: MessagesRoute,
+  NotificationsRoute: NotificationsRoute,
   OrdersRoute: OrdersRoute,
   PaymentRoute: PaymentRoute,
+  PaymentsRoute: PaymentsRoute,
   ProRoute: ProRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ProposalsRoute: ProposalsRoute,
   RateRoute: RateRoute,
   RequestRoute: RequestRoute,
+  RequestEditRoute: RequestEditRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
+  SecurityRoute: SecurityRoute,
+  TermsRoute: TermsRoute,
   TrackingRoute: TrackingRoute,
+  ProvidersProviderIdRoute: ProvidersProviderIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
