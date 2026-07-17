@@ -77,11 +77,13 @@ function Payment() {
   const { data: settings } = usePaymentSettings();
   const [paying, setPaying] = useState(false);
   const [method, setMethod] = useState<"pix" | "card">("pix");
+  // MVP em validacao: nenhum fluxo deve encaminhar para cobranca real.
+  const isHomologation = true;
 
   async function pay() {
     if (!orderId) return;
     setPaying(true);
-    if ((settings ?? HOMOLOGATION_SETTINGS).payment_mode === "homologacao") {
+    if (isHomologation) {
       const { error } = await supabase.rpc("confirm_order_payment", { p_order_id: orderId });
       setPaying(false);
       if (error) {
@@ -107,7 +109,6 @@ function Payment() {
     window.location.assign(data.checkoutUrl as string);
   }
 
-  const isHomologation = settings?.payment_mode === "homologacao";
   const pixAvailable = settings?.pix_enabled ?? true;
   const cardAvailable = settings?.card_enabled ?? true;
 
