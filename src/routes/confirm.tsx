@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 
 type OrderPhoto = { id: string; kind: "antes" | "depois"; photo_url: string };
 
-type OrderForConfirmation = { id: string; status: string; pricing_type: "fixed" | "range"; quoted_price_min: number; quoted_price_max: number; final_price: number; final_amount_approved_at: string | null };
+type OrderForConfirmation = { id: string; status: string; pricing_type: "fixed" | "range"; quoted_price_min: number; quoted_price_max: number; final_price: number; final_amount_approved_at: string | null; guarantee_until: string | null; guarantee_status: string };
 
 function useOrderForConfirmation(orderId: string | undefined) {
   return useQuery({
@@ -17,7 +17,7 @@ function useOrderForConfirmation(orderId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, status, pricing_type, quoted_price_min, quoted_price_max, final_price, final_amount_approved_at")
+        .select("id, status, pricing_type, quoted_price_min, quoted_price_max, final_price, final_amount_approved_at, guarantee_until, guarantee_status")
         .eq("id", orderId)
         .returns<OrderForConfirmation[]>()
         .single();
@@ -64,6 +64,7 @@ function Confirm() {
   const [disputeReason, setDisputeReason] = useState("");
   const [sendingDispute, setSendingDispute] = useState(false);
   const readyForConfirmation = order?.status === "fotos_enviadas" || order?.status === "aguardando_confirmacao";
+  const guaranteeActive = order?.status === "concluido" && order.guarantee_status === "em_garantia" && !!order.guarantee_until && new Date(order.guarantee_until) > new Date();
 
   async function confirmCompletion() {
     if (!orderId || !readyForConfirmation || depois.length === 0) {
@@ -184,7 +185,7 @@ function Confirm() {
         </button>
         <button
           onClick={() => setReporting((v) => !v)}
-          disabled={!readyForConfirmation}
+          disabled={!readyForConfirmation && !guaranteeActive}
           className="w-full h-12 rounded-2xl text-destructive font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
         >
           <AlertTriangle className="h-4 w-4" /> Reportar problema
