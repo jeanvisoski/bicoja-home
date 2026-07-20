@@ -14,6 +14,7 @@ import { BottomNav } from "@/components/bicoja/BottomNav";
 import { useCategories, categoryIcon } from "@/lib/categories";
 import { supabase } from "@/lib/supabase";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 
 export const Route = createFileRoute("/search")({
   component: SearchPage,
@@ -72,6 +73,7 @@ function SearchPage() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Buscar profissionais" back={false} />
       <div className="flex-1 overflow-y-auto pb-4">
         <div className="px-5 pt-8">
           <h1 className="text-2xl font-extrabold font-[Manrope] tracking-tight mb-4">Buscar</h1>

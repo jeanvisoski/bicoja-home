@@ -7,6 +7,7 @@ import { TrustBadge } from "@/components/bicoja/TrustBadge";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 
 export const Route = createFileRoute("/profile")({
   component: Profile,
@@ -59,6 +60,7 @@ function Profile() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Perfil" back={false} />
       <div className="flex-1 overflow-y-auto pb-4">
         <div className="bg-hero text-primary-foreground px-5 pt-10 pb-8 relative overflow-hidden">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />

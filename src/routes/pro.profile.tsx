@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { BadgeCheck, Star, LogOut, LocateFixed, X, Plus, Camera, MapPin, Pencil, FileText } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 import { TrustBadge } from "@/components/bicoja/TrustBadge";
 import { MapView } from "@/components/bicoja/MapView";
 import { supabase } from "@/lib/supabase";
@@ -319,6 +320,7 @@ function ProProfile() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Perfil profissional" back={false} />
       <div className="flex-1 overflow-y-auto pb-4">
         <div className="bg-hero text-primary-foreground px-5 pt-10 pb-16 relative overflow-hidden">
           <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />

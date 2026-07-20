@@ -9,6 +9,7 @@ import { useSession } from "@/lib/session-context";
 import { useCategories, categoryIcon } from "@/lib/categories";
 import { useUnreadCount } from "@/lib/notifications";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 
 export const Route = createFileRoute("/home")({
   component: Home,
@@ -141,11 +142,12 @@ function Home() {
   }, [isProvider, nav]);
 
   if (checkingRole || isProvider) {
-    return <PhoneFrame><div className="flex-1" /></PhoneFrame>;
+    return <PhoneFrame><AppHeader title="Início" back={false} /><div className="flex-1" /></PhoneFrame>;
   }
 
   return (
     <PhoneFrame>
+      <AppHeader title="Início" back={false} />
       <div className="flex-1 overflow-y-auto pb-4">
         {/* Greeting */}
         <div className="px-5 pt-8 pb-4 flex items-center justify-between">

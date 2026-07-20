@@ -14,19 +14,16 @@ const slides = [
     eyebrow: "Bem-vindo à BICOJÁ",
     title: "Contrate profissionais com segurança.",
     body: "Eletricistas, encanadores, diaristas e mais — verificados, avaliados e prontos para atender.",
-    tint: "from-primary to-primary/70",
   },
   {
     eyebrow: "Pagamento protegido",
     title: "Seu dinheiro só é liberado quando o serviço termina.",
     body: "A BICOJÁ guarda o valor até você confirmar que ficou tudo certo. Sem surpresas.",
-    tint: "from-trust to-trust/70",
   },
   {
     eyebrow: "Prestadores verificados",
     title: "Cada profissional passa por checagem.",
     body: "Identidade, documentos e reputação conferidos. Aqui só entra quem inspira confiança.",
-    tint: "from-primary to-trust",
   },
 ];
 
@@ -36,9 +33,9 @@ function Onboarding() {
   const last = i === slides.length - 1;
   return (
     <PhoneFrame>
-      <div className="flex-1 flex flex-col px-6 pt-10 pb-8">
+      <div className="flex-1 flex flex-col px-6 pt-6 pb-8">
         <div className="flex items-center justify-between">
-          <BrandLogo variant="lockup" className="h-16 w-32" />
+          <BrandLogo variant="lockup" className="h-9 w-28" />
           {!last && (
             <Link to="/login" className="text-sm text-muted-foreground font-medium">
               Pular
@@ -50,9 +47,9 @@ function Onboarding() {
           key={i}
           className="flex-1 flex flex-col items-center justify-center text-center animate-float-up"
         >
-          <div className={`h-56 w-56 rounded-[40%] bg-gradient-to-br ${S.tint} flex items-center justify-center shadow-float mb-10 overflow-hidden`}>
-            <BrandLogo variant="full" className="h-full w-full" />
-          </div>
+          <span className="mb-7 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-semibold tracking-[0.18em] text-primary">
+            {String(i + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+          </span>
           <p className="text-xs font-semibold text-primary uppercase tracking-widest mb-3">
             {S.eyebrow}
           </p>

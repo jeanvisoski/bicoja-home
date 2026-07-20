@@ -8,6 +8,8 @@ import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
+import { AppHeader } from "@/components/bicoja/AppHeader";
+import { BrandLogo } from "@/components/bicoja/BrandLogo";
 
 export const Route = createFileRoute("/messages")({
   component: Messages,
@@ -205,6 +207,7 @@ function Messages() {
           <button onClick={() => setOpenId(null)} className="p-2 -ml-2 rounded-full hover:bg-muted">
             <ChevronLeft className="h-5 w-5" />
           </button>
+          <BrandLogo className="h-7 w-7 shrink-0" />
           <ProfileAvatar name={openChat.otherName} src={openChat.otherAvatarUrl} className="h-9 w-9 rounded-full text-sm" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1">
@@ -258,6 +261,7 @@ function Messages() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Mensagens" back={false} />
       <div className="flex-1 overflow-y-auto">
         <div className="px-5 pt-8">
           <h1 className="text-2xl font-extrabold font-[Manrope] tracking-tight mb-4">Mensagens</h1>

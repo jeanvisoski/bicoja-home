@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 import { categoryIcon } from "@/lib/categories";
 import { useUnreadCount } from "@/lib/notifications";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 
 export const Route = createFileRoute("/pro/")({
   component: ProDashboard,
@@ -274,6 +275,7 @@ function ProDashboard() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Painel profissional" back={false} />
       <div className="flex-1 overflow-y-auto pb-4">
         <div className="px-5 pt-8 pb-4 flex items-center justify-between">
           <div>

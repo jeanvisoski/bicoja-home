@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 import { categoryIcon } from "@/lib/categories";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 
 export const Route = createFileRoute("/orders")({
   component: Orders,
@@ -99,6 +100,7 @@ function Orders() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Pedidos" back={false} />
       <div className="flex-1 overflow-y-auto">
         <div className="px-5 pt-8 pb-2">
           <h1 className="text-2xl font-extrabold font-[Manrope] tracking-tight">Seus pedidos</h1>

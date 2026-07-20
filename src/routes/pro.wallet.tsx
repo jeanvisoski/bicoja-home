@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { ArrowDownLeft, ArrowUpRight, Clock3, WalletCards } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
+import { AppHeader } from "@/components/bicoja/AppHeader";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 
@@ -92,6 +93,7 @@ function ProWallet() {
 
   return (
     <PhoneFrame>
+      <AppHeader title="Carteira" back={false} />
       <div className="flex-1 overflow-y-auto pb-5">
         <header className="px-5 pt-8 pb-5 bg-hero text-primary-foreground">
           <p className="text-xs uppercase tracking-widest font-semibold opacity-80">Carteira profissional</p>
