@@ -28,6 +28,7 @@ supabase secrets set MERCADOPAGO_ACCESS_TOKEN="seu_token_de_producao"
 ```bash
 supabase functions deploy create-mercadopago-checkout
 supabase functions deploy mercadopago-webhook --no-verify-jwt
+supabase functions deploy mercadopago-refund
 ```
 
 5. No painel administrativo, mantenha **Homologacao** para validar o fluxo atual.
@@ -36,3 +37,10 @@ supabase functions deploy mercadopago-webhook --no-verify-jwt
 
 O webhook consulta o pagamento diretamente no Mercado Pago antes de confirmar o
 pedido. Somente entao a proposta vencedora e aceita e todas as outras sao recusadas.
+
+## Reembolsos
+
+Ao resolver uma disputa com reembolso no admin, a plataforma registra o valor
+pendente e chama `mercadopago-refund`. Em homologacao o reembolso e simulado;
+em sandbox/producao a Function solicita o reembolso na transacao Mercado Pago
+original. O admin deve conferir o resultado no gateway antes de encerrar o caso.

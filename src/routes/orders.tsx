@@ -45,6 +45,8 @@ function useMyOrders(clientId: string | undefined) {
   return useQuery({
     queryKey: ["my-orders", clientId],
     queryFn: async () => {
+      // Aplica conclusoes que venceram o prazo configurado antes de montar a lista.
+      await supabase.rpc("complete_due_orders");
       const { data, error } = await supabase
         .from("orders")
         .select(
