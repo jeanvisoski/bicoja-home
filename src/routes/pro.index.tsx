@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingUp, Wallet, Star, Bell, ChevronRight, ShieldCheck, MapPin } from "lucide-react";
+import { TrendingUp, Wallet, Star, Bell, ChevronRight, ShieldCheck, MapPin, CalendarDays } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
@@ -334,6 +334,22 @@ function ProDashboard() {
             label="Serviços"
             tint="bg-emerald-100 text-emerald-700"
           />
+        </div>
+
+        <div className="px-5 mt-5">
+          <Link
+            to="/pro/schedule"
+            className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-card active:scale-[0.99] transition-transform"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <CalendarDays className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold">Minha agenda</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Veja todos os serviços, datas e histórico.</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
         </div>
 
         <section className="px-5 mt-6">
