@@ -17,8 +17,8 @@ Deno.serve(async (request) => {
     if (userError || !user) throw new Error("Sessao invalida.");
 
     const admin = createClient(supabaseUrl, serviceKey);
-    const { data: adminProfile } = await admin.from("profiles").select("role").eq("id", user.id).single();
-    if (adminProfile?.role !== "admin") throw new Error("Operacao administrativa.");
+    const { data: adminProfile } = await admin.from("profiles").select("is_admin").eq("id", user.id).single();
+    if (!adminProfile?.is_admin) throw new Error("Operacao administrativa.");
 
     const { orderId, amount } = await request.json();
     if (!orderId) throw new Error("Pedido nao informado.");

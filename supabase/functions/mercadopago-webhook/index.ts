@@ -26,7 +26,7 @@ Deno.serve(async (request) => {
     if (!orderId) return new Response("missing order", { status: 200 });
 
     await admin.from("payment_transactions").update({
-      status: payment.status === "approved" ? "approved" : payment.status === "rejected" ? "rejected" : "pending",
+      status: payment.status === "approved" ? "approved" : payment.status === "refunded" ? "refunded" : payment.status === "cancelled" ? "cancelled" : payment.status === "rejected" ? "rejected" : "pending",
       gateway_payment_id: String(payment.id), raw_response: payment, updated_at: new Date().toISOString(),
     }).eq("order_id", orderId);
 
