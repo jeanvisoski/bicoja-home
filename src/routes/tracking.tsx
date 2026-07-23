@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Check, MessageCircle, Phone, BadgeCheck, Star } from "lucide-react";
+import { Check, MessageCircle, Phone, BadgeCheck, Star, CalendarClock } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { MapView } from "@/components/bicoja/MapView";
@@ -38,6 +38,9 @@ const STEPS = [
 type OrderTracking = {
   id: string;
   status: string;
+  scheduled_date: string | null;
+  scheduled_start_time: string | null;
+  scheduled_end_time: string | null;
   service_requests: {
     description: string;
     service_categories: { label: string } | null;
@@ -64,7 +67,7 @@ function useOrder(orderId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, status, service_requests(description, service_categories(label), addresses(lat, lng)), provider_profiles(profiles(full_name, avatar_url), rating_avg, rating_count, lat, lng), order_provider_locations(lat, lng, updated_at)",
+          "id, status, scheduled_date, scheduled_start_time, scheduled_end_time, service_requests(description, service_categories(label), addresses(lat, lng)), provider_profiles(profiles(full_name, avatar_url), rating_avg, rating_count, lat, lng), order_provider_locations(lat, lng, updated_at)",
         )
         .eq("id", orderId)
         .returns<OrderTracking[]>()
@@ -169,6 +172,24 @@ function Tracking() {
             </div>
           </div>
         </div>
+
+        {order?.scheduled_date && (
+          <div className="px-5 pt-4">
+            <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">
+              <CalendarClock className="h-5 w-5 text-primary shrink-0" />
+              <p className="text-sm">
+                <span className="font-semibold">Agendado para: </span>
+                {new Date(`${order.scheduled_date}T12:00:00`).toLocaleDateString("pt-BR", {
+                  day: "2-digit",
+                  month: "long",
+                })}
+                {order.scheduled_start_time && order.scheduled_end_time
+                  ? `, das ${order.scheduled_start_time.slice(0, 5)} às ${order.scheduled_end_time.slice(0, 5)}`
+                  : ""}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="px-5 pt-6 pb-8">
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">

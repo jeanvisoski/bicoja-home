@@ -190,6 +190,10 @@ function ProOrder() {
   const [duration, setDuration] = useState("");
   const [finalPrice, setFinalPrice] = useState("");
   const [note, setNote] = useState("");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledStartTime, setScheduledStartTime] = useState("");
+  const [scheduledEndTime, setScheduledEndTime] = useState("");
+  const [scheduleTouched, setScheduleTouched] = useState(false);
   const [sending, setSending] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
@@ -264,6 +268,22 @@ function ProOrder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.status, orderId, session?.user.id]);
 
+  // Pré-preenche com a janela que o cliente informou -- o prestador confirma
+  // ou ajusta a data/horário real dentro (ou perto) dela ao enviar o orçamento.
+  useEffect(() => {
+    if (!request || scheduleTouched) return;
+    if (request.urgency === "hoje") {
+      setScheduledDate(new Date().toISOString().slice(0, 10));
+    } else if (request.availability_start) {
+      setScheduledDate(request.availability_start);
+    }
+    if (request.availability_start_time)
+      setScheduledStartTime(request.availability_start_time.slice(0, 5));
+    if (request.availability_end_time)
+      setScheduledEndTime(request.availability_end_time.slice(0, 5));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [request]);
+
   async function handlePickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -286,6 +306,14 @@ function ProOrder() {
       toast.error("Informe valores válidos para o orçamento.");
       return;
     }
+    if (!scheduledDate || !scheduledStartTime || !scheduledEndTime) {
+      toast.error("Informe a data e o horário em que você fará o serviço.");
+      return;
+    }
+    if (scheduledEndTime <= scheduledStartTime) {
+      toast.error("O horário final precisa ser depois do horário inicial.");
+      return;
+    }
     setSending(true);
     const { error } = await supabase.from("proposals").insert({
       request_id: requestId,
@@ -297,6 +325,9 @@ function ProOrder() {
       eta_minutes: Number(eta) || null,
       duration_minutes: Number(duration) || null,
       message: note || null,
+      scheduled_date: scheduledDate,
+      scheduled_start_time: scheduledStartTime,
+      scheduled_end_time: scheduledEndTime,
     });
     setSending(false);
     if (error) {
@@ -485,6 +516,40 @@ function ProOrder() {
                     placeholder="Ex.: 60"
                     className="w-20 h-11 px-3 rounded-xl bg-background border border-border text-sm font-semibold outline-none"
                   />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Quando você fará o serviço</p>
+                  <input
+                    type="date"
+                    value={scheduledDate}
+                    onChange={(e) => {
+                      setScheduledDate(e.target.value);
+                      setScheduleTouched(true);
+                    }}
+                    min={new Date().toISOString().slice(0, 10)}
+                    className="w-full h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                  />
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <input
+                      type="time"
+                      value={scheduledStartTime}
+                      onChange={(e) => {
+                        setScheduledStartTime(e.target.value);
+                        setScheduleTouched(true);
+                      }}
+                      className="w-full h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                    />
+                    <input
+                      type="time"
+                      value={scheduledEndTime}
+                      onChange={(e) => {
+                        setScheduledEndTime(e.target.value);
+                        setScheduleTouched(true);
+                      }}
+                      min={scheduledStartTime || undefined}
+                      className="w-full h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                    />
+                  </div>
                 </div>
                 <textarea
                   value={note}

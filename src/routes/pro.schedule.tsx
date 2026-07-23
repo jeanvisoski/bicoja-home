@@ -40,6 +40,9 @@ type ScheduleOrder = {
   status: string;
   created_at: string;
   price: number;
+  scheduled_date: string | null;
+  scheduled_start_time: string | null;
+  scheduled_end_time: string | null;
   service_requests: {
     scheduled_at: string | null;
     availability_start: string | null;
@@ -65,7 +68,7 @@ function useProviderOrders(providerId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, status, created_at, price, service_requests(scheduled_at, availability_start, availability_end, availability_start_time, availability_end_time, service_categories(label, icon), addresses(street, number, neighborhood, city, state)), profiles(full_name)",
+          "id, status, created_at, price, scheduled_date, scheduled_start_time, scheduled_end_time, service_requests(scheduled_at, availability_start, availability_end, availability_start_time, availability_end_time, service_categories(label, icon), addresses(street, number, neighborhood, city, state)), profiles(full_name)",
         )
         .eq("provider_id", providerId)
         .order("created_at", { ascending: false })
@@ -84,6 +87,10 @@ function sameDay(a: Date, b: Date) {
 }
 
 function serviceDate(order: ScheduleOrder) {
+  // O agendamento confirmado pelo prestador ao enviar o orçamento é a fonte
+  // de verdade. Só cai para a janela solta do pedido em ordens antigas, de
+  // antes desse agendamento existir.
+  if (order.scheduled_date) return new Date(`${order.scheduled_date}T12:00:00`);
   const request = order.service_requests;
   if (!request) return null;
   if (request.scheduled_at) return new Date(request.scheduled_at);
@@ -91,6 +98,17 @@ function serviceDate(order: ScheduleOrder) {
 }
 
 function scheduleLabel(order: ScheduleOrder) {
+  if (order.scheduled_date) {
+    const date = new Date(`${order.scheduled_date}T12:00:00`).toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "short",
+    });
+    const hours =
+      order.scheduled_start_time && order.scheduled_end_time
+        ? ` · ${order.scheduled_start_time.slice(0, 5)}–${order.scheduled_end_time.slice(0, 5)}`
+        : "";
+    return `${date}${hours}`;
+  }
   const request = order.service_requests;
   if (!request) return "Data a combinar";
   if (request.scheduled_at) {
