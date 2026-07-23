@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { CLIENT_TERMS_VERSION } from "@/lib/terms-versions";
 
 export const Route = createFileRoute("/terms")({
   component: Terms,
@@ -42,7 +43,12 @@ function Terms() {
           <p>
             O prestador não pode solicitar Pix, dinheiro, transferência ou outro pagamento externo
             para serviço iniciado pela BICOJÁ. Tentativas de desvio podem gerar advertência, perda
-            de destaque, suspensão ou encerramento da conta.
+            de destaque, suspensão ou encerramento da conta. Prestadores também aceitam, em um
+            documento próprio, o{" "}
+            <Link to="/provider-terms" className="text-primary font-semibold">
+              Contrato de Prestação de Serviço Autônomo
+            </Link>
+            , que detalha a natureza da relação, repasse e responsabilidades.
           </p>
         </Section>
         <Section title="4. Proteção, garantia e mediação">
@@ -69,7 +75,7 @@ function Terms() {
           </p>
         </Section>
         <p className="text-xs text-muted-foreground">
-          Atualizado em 17/07/2026. Dúvidas? Consulte a{" "}
+          Versão {CLIENT_TERMS_VERSION}. Dúvidas? Consulte a{" "}
           <Link to="/help" className="text-primary font-semibold">
             central de ajuda
           </Link>

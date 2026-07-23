@@ -25,6 +25,7 @@ import { uploadPhoto } from "@/lib/storage";
 import { formatCep, geocodeAddressText, lookupCep } from "@/lib/cep";
 import { getCurrentPosition, reverseGeocode } from "@/lib/geocode";
 import { categoryIcon, useCategories } from "@/lib/categories";
+import { CLIENT_TERMS_VERSION, PROVIDER_TERMS_VERSION } from "@/lib/terms-versions";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -80,6 +81,7 @@ function Login() {
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [providerTermsAccepted, setProviderTermsAccepted] = useState(false);
   const nav = useNavigate();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const { data: categories = [] } = useCategories();
@@ -169,6 +171,10 @@ function Login() {
         toast.error("Você precisa aceitar os Termos de Uso para criar a conta.");
         return;
       }
+      if (role === "prestador" && !providerTermsAccepted) {
+        toast.error("Você precisa aceitar o Contrato de Prestação de Serviço Autônomo.");
+        return;
+      }
       if (!strength.isStrong) {
         toast.error(
           "Sua senha precisa ser forte: pelo menos 8 caracteres, com maiúscula, minúscula, número e símbolo.",
@@ -237,8 +243,6 @@ function Login() {
         toast.error(profileError.message);
         return;
       }
-      // Mantém o cadastro funcional enquanto a migration de termos ainda não foi aplicada.
-      // Após a migration, o aceite passa a ficar registrado no perfil.
       await supabase
         .from("profiles")
         .update({
@@ -246,6 +250,30 @@ function Login() {
           provider_terms_accepted_at: role === "prestador" ? new Date().toISOString() : null,
         })
         .eq("id", data.session.user.id);
+      // Registro auditável de qual versão do texto foi aceita (não só a data) --
+      // fonte de verdade para prova de consentimento em caso de disputa.
+      await supabase.from("terms_acceptances").insert(
+        role === "prestador"
+          ? [
+              {
+                profile_id: data.session.user.id,
+                document: "cliente",
+                version: CLIENT_TERMS_VERSION,
+              },
+              {
+                profile_id: data.session.user.id,
+                document: "prestador",
+                version: PROVIDER_TERMS_VERSION,
+              },
+            ]
+          : [
+              {
+                profile_id: data.session.user.id,
+                document: "cliente",
+                version: CLIENT_TERMS_VERSION,
+              },
+            ],
+      );
 
       if (role === "prestador") {
         let avatarUrl: string;
@@ -726,6 +754,23 @@ function Login() {
               Li e aceito os{" "}
               <Link to="/terms" className="text-primary font-semibold">
                 Termos de Uso e regras de pagamento protegido
+              </Link>
+              .
+            </span>
+          </label>
+        )}
+        {mode === "criar" && role === "prestador" && (
+          <label className="flex items-start gap-2 text-[11px] text-muted-foreground mt-3 leading-relaxed text-left">
+            <input
+              type="checkbox"
+              checked={providerTermsAccepted}
+              onChange={(e) => setProviderTermsAccepted(e.target.checked)}
+              className="mt-0.5"
+            />{" "}
+            <span>
+              Li e aceito o{" "}
+              <Link to="/provider-terms" className="text-primary font-semibold">
+                Contrato de Prestação de Serviço Autônomo
               </Link>
               .
             </span>

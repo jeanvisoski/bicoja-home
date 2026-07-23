@@ -23,6 +23,7 @@ import { Route as PaymentsRouteImport } from './routes/payments'
 import { Route as ProRouteImport } from './routes/pro'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ProposalsRouteImport } from './routes/proposals'
+import { Route as ProviderTermsRouteImport } from './routes/provider-terms'
 import { Route as RateRouteImport } from './routes/rate'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as RequestEditRouteImport } from './routes/request-edit'
@@ -106,6 +107,11 @@ const ProfileRoute = ProfileRouteImport.update({
 const ProposalsRoute = ProposalsRouteImport.update({
   id: '/proposals',
   path: '/proposals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProviderTermsRoute = ProviderTermsRouteImport.update({
+  id: '/provider-terms',
+  path: '/provider-terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RateRoute = RateRouteImport.update({
@@ -194,6 +200,7 @@ export interface FileRoutesByFullPath {
   '/pro': typeof ProRouteWithChildren
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
+  '/provider-terms': typeof ProviderTermsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/request-edit': typeof RequestEditRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByTo {
   '/payments': typeof PaymentsRoute
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
+  '/provider-terms': typeof ProviderTermsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/request-edit': typeof RequestEditRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/pro': typeof ProRouteWithChildren
   '/profile': typeof ProfileRoute
   '/proposals': typeof ProposalsRoute
+  '/provider-terms': typeof ProviderTermsRoute
   '/rate': typeof RateRoute
   '/request': typeof RequestRoute
   '/request-edit': typeof RequestEditRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/pro'
     | '/profile'
     | '/proposals'
+    | '/provider-terms'
     | '/rate'
     | '/request'
     | '/request-edit'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/payments'
     | '/profile'
     | '/proposals'
+    | '/provider-terms'
     | '/rate'
     | '/request'
     | '/request-edit'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/pro'
     | '/profile'
     | '/proposals'
+    | '/provider-terms'
     | '/rate'
     | '/request'
     | '/request-edit'
@@ -376,6 +388,7 @@ export interface RootRouteChildren {
   ProRoute: typeof ProRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   ProposalsRoute: typeof ProposalsRoute
+  ProviderTermsRoute: typeof ProviderTermsRoute
   RateRoute: typeof RateRoute
   RequestRoute: typeof RequestRoute
   RequestEditRoute: typeof RequestEditRoute
@@ -485,6 +498,13 @@ declare module '@tanstack/react-router' {
       path: '/proposals'
       fullPath: '/proposals'
       preLoaderRoute: typeof ProposalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/provider-terms': {
+      id: '/provider-terms'
+      path: '/provider-terms'
+      fullPath: '/provider-terms'
+      preLoaderRoute: typeof ProviderTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rate': {
@@ -621,6 +641,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProRoute: ProRouteWithChildren,
   ProfileRoute: ProfileRoute,
   ProposalsRoute: ProposalsRoute,
+  ProviderTermsRoute: ProviderTermsRoute,
   RateRoute: RateRoute,
   RequestRoute: RequestRoute,
   RequestEditRoute: RequestEditRoute,
