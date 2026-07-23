@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ShieldCheck } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { PROVIDER_TERMS_VERSION } from "@/lib/terms-versions";
@@ -14,14 +13,6 @@ function ProviderTerms() {
     <PhoneFrame>
       <AppHeader title="Contrato de prestação" back />
       <main className="flex-1 overflow-y-auto px-5 py-5 pb-8 space-y-5 text-sm leading-relaxed">
-        <div className="rounded-2xl bg-trust-soft/50 border border-trust/20 p-4 flex gap-3">
-          <ShieldCheck className="h-5 w-5 text-trust shrink-0" />
-          <p>
-            <strong>Versão de operação inicial.</strong> Este texto foi escrito para refletir como o
-            app funciona hoje e ainda deve passar por revisão jurídica trabalhista antes da
-            publicação comercial da BICOJÁ.
-          </p>
-        </div>
         <Section title="1. Natureza da relação">
           <p>
             Você presta serviços de forma <strong>autônoma e independente</strong>. Não há vínculo
