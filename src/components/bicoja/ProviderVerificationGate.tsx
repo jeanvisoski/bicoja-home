@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type ChangeEvent } from "react";
 import { toast } from "sonner";
-import { FileText, ShieldAlert, ShieldCheck, Clock, LogOut } from "lucide-react";
+import { FileText, ShieldAlert, ShieldCheck, Clock, LogOut, UserRoundCheck } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { supabase } from "@/lib/supabase";
 import { useNavigate } from "@tanstack/react-router";
@@ -31,19 +31,30 @@ function useVerificationDocuments(providerId: string | undefined) {
 }
 
 const DOCUMENT_TYPES: {
-  type: "identidade" | "comprovante_endereco";
+  type: "identidade" | "selfie" | "comprovante_endereco";
   label: string;
   hint: string;
+  icon: typeof FileText;
+  capture?: "user";
 }[] = [
   {
     type: "identidade",
     label: "Documento de identidade",
     hint: "RG, CNH ou CPF, com foto legível.",
+    icon: FileText,
+  },
+  {
+    type: "selfie",
+    label: "Selfie com o documento",
+    hint: "Uma foto sua segurando o mesmo documento ao lado do rosto.",
+    icon: UserRoundCheck,
+    capture: "user",
   },
   {
     type: "comprovante_endereco",
     label: "Comprovante de residência",
     hint: "Conta de luz, água ou similar, recente.",
+    icon: FileText,
   },
 ];
 
@@ -58,13 +69,17 @@ function DocumentSlot({
   type,
   label,
   hint,
+  icon: Icon,
+  capture,
   latest,
   onUploaded,
 }: {
   userId: string;
-  type: "identidade" | "comprovante_endereco";
+  type: "identidade" | "selfie" | "comprovante_endereco";
   label: string;
   hint: string;
+  icon: typeof FileText;
+  capture?: "user";
   latest: VerificationDocument | undefined;
   onUploaded: () => void;
 }) {
@@ -101,12 +116,13 @@ function DocumentSlot({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,.pdf"
+        accept={capture ? "image/*" : "image/*,.pdf"}
+        capture={capture}
         className="hidden"
         onChange={upload}
       />
       <div className="flex items-start gap-3">
-        <FileText className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+        <Icon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
         <div className="flex-1">
           <p className="text-sm font-semibold">{label}</p>
           <p className="text-xs text-muted-foreground mt-1">{hint}</p>
@@ -162,7 +178,7 @@ export function ProviderVerificationGate({
 
   let headline = "Envie seus documentos para começar";
   let body =
-    "Antes de receber pedidos, precisamos confirmar sua identidade e endereço. Isso é revisado manualmente pela nossa equipe.";
+    "Antes de receber pedidos, precisamos confirmar sua identidade, que é você mesmo quem está se cadastrando, e seu endereço. Isso é revisado manualmente pela nossa equipe.";
   let Icon = ShieldAlert;
 
   if (suspended) {
@@ -204,6 +220,8 @@ export function ProviderVerificationGate({
                 type={d.type}
                 label={d.label}
                 hint={d.hint}
+                icon={d.icon}
+                capture={d.capture}
                 latest={latestOf(d.type)}
                 onUploaded={refetchDocuments}
               />
