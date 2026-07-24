@@ -1,7 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { Search, Wrench, Lock, Star, BadgeCheck, ChevronRight, Bell } from "lucide-react";
+import {
+  Search,
+  Wrench,
+  Lock,
+  Star,
+  BadgeCheck,
+  ChevronRight,
+  Bell,
+  Plus,
+  CalendarClock,
+} from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
@@ -94,31 +104,47 @@ type ActiveOrder = {
   id: string;
   status: string;
   request_id: string;
+  scheduled_date: string | null;
+  scheduled_start_time: string | null;
+  scheduled_end_time: string | null;
   provider_profiles: {
     profiles: { full_name: string | null; avatar_url: string | null } | null;
   } | null;
 };
 
-function useActiveOrder() {
+function useActiveOrders() {
   const { session } = useSession();
   const userId = session?.user.id;
   return useQuery({
-    queryKey: ["active-order", userId],
+    queryKey: ["active-orders", userId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, status, request_id, provider_profiles(profiles(full_name, avatar_url))")
+        .select(
+          "id, status, request_id, scheduled_date, scheduled_start_time, scheduled_end_time, provider_profiles(profiles(full_name, avatar_url))",
+        )
         .eq("client_id", userId)
         .not("status", "in", "(concluido,cancelado)")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .returns<ActiveOrder[]>()
-        .maybeSingle();
+        .returns<ActiveOrder[]>();
       if (error) throw error;
       return data;
     },
     enabled: !!userId,
   });
+}
+
+function orderScheduleLabel(order: ActiveOrder) {
+  if (!order.scheduled_date) return null;
+  const date = new Date(`${order.scheduled_date}T12:00:00`).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+  });
+  const hours =
+    order.scheduled_start_time && order.scheduled_end_time
+      ? ` · ${order.scheduled_start_time.slice(0, 5)}–${order.scheduled_end_time.slice(0, 5)}`
+      : "";
+  return `${date}${hours}`;
 }
 
 const ORDER_STATUS_LABEL: Record<string, string> = {
@@ -137,7 +163,7 @@ function Home() {
   const greetingName = useGreetingName();
   const { data: categories = [] } = useCategories();
   const { data: pros = [] } = useFeaturedProviders();
-  const { data: activeOrder } = useActiveOrder();
+  const { data: activeOrders = [] } = useActiveOrders();
   const { data: unreadCount = 0 } = useUnreadCount(session?.user.id);
 
   // Conta que é só prestador (nunca virou dual-role) continua indo direto
@@ -183,14 +209,20 @@ function Home() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="px-5">
+        {/* Search + nova solicitação */}
+        <div className="px-5 flex gap-2">
           <Link
             to="/search"
-            className="flex items-center gap-3 h-14 rounded-2xl bg-card border border-border px-4 shadow-card"
+            className="flex-1 flex items-center gap-3 h-14 rounded-2xl bg-card border border-border px-4 shadow-card"
           >
             <Search className="h-5 w-5 text-muted-foreground" />
             <span className="text-muted-foreground">Do que você precisa hoje?</span>
+          </Link>
+          <Link
+            to="/request"
+            className="shrink-0 flex items-center gap-2 h-14 px-4 rounded-2xl bg-primary text-primary-foreground font-semibold shadow-card"
+          >
+            <Plus className="h-5 w-5" /> Pedir
           </Link>
         </div>
 
@@ -305,32 +337,46 @@ function Home() {
           </div>
         </section>
 
-        {/* History */}
-        {activeOrder && (
+        {/* Em andamento */}
+        {activeOrders.length > 0 && (
           <section className="mt-7 px-5">
-            <h2 className="text-base font-bold mb-3">Seu histórico</h2>
-            <Link
-              to="/tracking"
-              search={{ orderId: activeOrder.id }}
-              className="block rounded-2xl bg-card border border-border p-4"
-            >
-              <div className="flex items-center gap-3">
-                <ProfileAvatar
-                  name={activeOrder.provider_profiles?.profiles?.full_name}
-                  src={activeOrder.provider_profiles?.profiles?.avatar_url}
-                  className="h-11 w-11 rounded-2xl text-sm"
-                />
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">
-                    {activeOrder.provider_profiles?.profiles?.full_name ?? "Prestador"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Pedido em andamento</p>
-                </div>
-                <span className="text-xs font-semibold px-2 py-1 rounded-full bg-trust-soft text-trust">
-                  {ORDER_STATUS_LABEL[activeOrder.status] ?? activeOrder.status}
-                </span>
-              </div>
-            </Link>
+            <h2 className="text-base font-bold mb-3">Em andamento</h2>
+            <div className="space-y-2">
+              {activeOrders.map((order) => {
+                const schedule = orderScheduleLabel(order);
+                return (
+                  <Link
+                    key={order.id}
+                    to="/tracking"
+                    search={{ orderId: order.id }}
+                    className="block rounded-2xl bg-card border border-border p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ProfileAvatar
+                        name={order.provider_profiles?.profiles?.full_name}
+                        src={order.provider_profiles?.profiles?.avatar_url}
+                        className="h-11 w-11 rounded-2xl text-sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {order.provider_profiles?.profiles?.full_name ?? "Prestador"}
+                        </p>
+                        {schedule ? (
+                          <p className="flex items-center gap-1 text-xs text-primary font-medium">
+                            <CalendarClock className="h-3 w-3" /> {schedule}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Data a combinar</p>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-trust-soft text-trust shrink-0">
+                        {ORDER_STATUS_LABEL[order.status] ?? order.status}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </section>
         )}
       </div>

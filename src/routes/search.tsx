@@ -110,12 +110,23 @@ function SearchPage() {
 
         {selectedCategory && (
           <section className="mt-7 px-5">
+            <Link
+              to="/request"
+              search={{ category: selectedCategory.slug }}
+              className="mb-4 flex items-center justify-center gap-2 h-12 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-card"
+            >
+              Pedir orçamento de {selectedCategory.label}
+            </Link>
             <div className="flex items-center gap-2 mb-3">
               <Users className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                 Prestadores de {selectedCategory.label}
               </h2>
             </div>
+            <p className="text-xs text-muted-foreground -mt-2 mb-3">
+              Veja quem já atende essa categoria, ou toque num prestador pra pedir orçamento
+              diretamente com ele.
+            </p>
             <div className="space-y-3">
               {isLoading && (
                 <p className="text-sm text-muted-foreground py-4 text-center">
