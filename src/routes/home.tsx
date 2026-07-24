@@ -1,17 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import {
-  Search,
-  Wrench,
-  Lock,
-  Star,
-  BadgeCheck,
-  ChevronRight,
-  Bell,
-  Plus,
-  CalendarClock,
-} from "lucide-react";
+import { Search, Lock, Star, BadgeCheck, Bell, Plus, CalendarClock } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
@@ -209,6 +199,49 @@ function Home() {
           </div>
         </div>
 
+        {/* Em andamento — o que o cliente veio ver primeiro, se tiver */}
+        {activeOrders.length > 0 && (
+          <section className="px-5 mb-5">
+            <h2 className="text-base font-bold mb-3">Seu serviço em andamento</h2>
+            <div className="space-y-2">
+              {activeOrders.map((order) => {
+                const schedule = orderScheduleLabel(order);
+                return (
+                  <Link
+                    key={order.id}
+                    to="/tracking"
+                    search={{ orderId: order.id }}
+                    className="block rounded-2xl bg-card border border-primary/30 shadow-card p-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ProfileAvatar
+                        name={order.provider_profiles?.profiles?.full_name}
+                        src={order.provider_profiles?.profiles?.avatar_url}
+                        className="h-11 w-11 rounded-2xl text-sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {order.provider_profiles?.profiles?.full_name ?? "Prestador"}
+                        </p>
+                        {schedule ? (
+                          <p className="flex items-center gap-1 text-xs text-primary font-medium">
+                            <CalendarClock className="h-3 w-3" /> {schedule}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Data a combinar</p>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-trust-soft text-trust shrink-0">
+                        {ORDER_STATUS_LABEL[order.status] ?? order.status}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* Search + nova solicitação */}
         <div className="px-5 flex gap-2">
           <Link
@@ -224,25 +257,6 @@ function Home() {
           >
             <Plus className="h-5 w-5" /> Pedir
           </Link>
-        </div>
-
-        {/* Trust banner */}
-        <div className="px-5 mt-5">
-          <div className="relative overflow-hidden rounded-3xl bg-hero p-5 text-primary-foreground shadow-float">
-            <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
-            <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-white/10" />
-            <div className="relative">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest bg-white/15 rounded-full px-2.5 py-1 mb-3">
-                <Lock className="h-3 w-3" /> Garantia BICOJÁ
-              </div>
-              <h3 className="text-xl font-extrabold leading-tight mb-1 font-[Manrope]">
-                Pagamento protegido em todo serviço
-              </h3>
-              <p className="text-sm text-primary-foreground/80">
-                Seu dinheiro só é liberado quando você aprovar.
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Categories */}
@@ -317,68 +331,24 @@ function Home() {
           </section>
         )}
 
-        {/* Popular */}
-        <section className="mt-7 px-5">
-          <h2 className="text-base font-bold mb-3">Serviços populares</h2>
-          <div className="space-y-2">
-            {["Instalação de chuveiro", "Reparo de vazamento", "Faxina completa"].map((s, i) => (
-              <Link
-                to="/request"
-                key={s}
-                className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border"
-              >
-                <div className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center text-primary font-bold">
-                  {i + 1}
-                </div>
-                <span className="flex-1 text-sm font-medium">{s}</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Em andamento */}
-        {activeOrders.length > 0 && (
-          <section className="mt-7 px-5">
-            <h2 className="text-base font-bold mb-3">Em andamento</h2>
-            <div className="space-y-2">
-              {activeOrders.map((order) => {
-                const schedule = orderScheduleLabel(order);
-                return (
-                  <Link
-                    key={order.id}
-                    to="/tracking"
-                    search={{ orderId: order.id }}
-                    className="block rounded-2xl bg-card border border-border p-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <ProfileAvatar
-                        name={order.provider_profiles?.profiles?.full_name}
-                        src={order.provider_profiles?.profiles?.avatar_url}
-                        className="h-11 w-11 rounded-2xl text-sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">
-                          {order.provider_profiles?.profiles?.full_name ?? "Prestador"}
-                        </p>
-                        {schedule ? (
-                          <p className="flex items-center gap-1 text-xs text-primary font-medium">
-                            <CalendarClock className="h-3 w-3" /> {schedule}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">Data a combinar</p>
-                        )}
-                      </div>
-                      <span className="text-xs font-semibold px-2 py-1 rounded-full bg-trust-soft text-trust shrink-0">
-                        {ORDER_STATUS_LABEL[order.status] ?? order.status}
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+        {/* Trust banner — vem depois da ação principal, não antes */}
+        <div className="px-5 mt-7">
+          <div className="relative overflow-hidden rounded-3xl bg-hero p-5 text-primary-foreground shadow-float">
+            <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
+            <div className="absolute -right-4 bottom-0 h-24 w-24 rounded-full bg-white/10" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest bg-white/15 rounded-full px-2.5 py-1 mb-3">
+                <Lock className="h-3 w-3" /> Garantia BICOJÁ
+              </div>
+              <h3 className="text-xl font-extrabold leading-tight mb-1 font-[Manrope]">
+                Pagamento protegido em todo serviço
+              </h3>
+              <p className="text-sm text-primary-foreground/80">
+                Seu dinheiro só é liberado quando você aprovar.
+              </p>
             </div>
-          </section>
-        )}
+          </div>
+        </div>
       </div>
       <BottomNav variant="client" />
     </PhoneFrame>
