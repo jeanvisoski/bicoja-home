@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Sparkles, Camera, LocateFixed, MapPin } from "lucide-react";
+import { Sparkles, Camera, LocateFixed, MapPin, MapPinOff } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { supabase } from "@/lib/supabase";
@@ -36,14 +36,25 @@ function useCurrentAvatar(userId: string | undefined) {
   });
 }
 
+type RegionStatus = "unchecked" | "available" | "unavailable";
+
 function BecomeProvider() {
   const { session } = useSession();
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
   const { data: categories = [] } = useCategories();
-  const { data: launchRegionSettings } = useLaunchRegionSettings();
+  const { data: launchRegionSettings, isLoading: loadingRegionSettings } =
+    useLaunchRegionSettings();
   const { data: existingAvatar } = useCurrentAvatar(userId);
+
+  // A disponibilidade de região é verificada ANTES de mostrar qualquer outro
+  // campo do cadastro -- sem isso, dava pra preencher tudo e só descobrir no
+  // fim (ou nem descobrir, se a checagem carregasse depois do clique).
+  const [regionStatus, setRegionStatus] = useState<RegionStatus>("unchecked");
+  const [regionCep, setRegionCep] = useState("");
+  const [checkingRegion, setCheckingRegion] = useState(false);
+  const [regionCityLabel, setRegionCityLabel] = useState("");
 
   const [headline, setHeadline] = useState("");
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
@@ -62,6 +73,37 @@ function BecomeProvider() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [sending, setSending] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  async function checkRegion() {
+    setCheckingRegion(true);
+    setAddressError(null);
+    try {
+      const found = await lookupCep(regionCep);
+      const available = isInsideActiveServiceArea(launchRegionSettings, found.city, found.state);
+      setRegionCityLabel(`${found.city}/${found.state}`);
+      if (!available) {
+        setRegionStatus("unavailable");
+        return;
+      }
+      // Já aproveita a busca do CEP pra pré-preencher o endereço do prestador.
+      setCep(regionCep);
+      setStreet(found.street);
+      setNeighborhood(found.neighborhood);
+      setCity(found.city);
+      setState(found.state);
+      const geocoded = await geocodeAddressText(
+        `${found.street}, ${found.city}, ${found.state}, Brasil`,
+      );
+      if (geocoded) {
+        setLat(geocoded.lat);
+        setLng(geocoded.lng);
+      }
+      setRegionStatus("available");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível consultar o CEP.");
+    }
+    setCheckingRegion(false);
+  }
 
   async function locate() {
     setLocating(true);
@@ -130,8 +172,11 @@ function BecomeProvider() {
       toast.error("Preencha o endereço completo e confirme a localização pelo GPS ou CEP.");
       return;
     }
+    // Já foi checado na etapa de região, mas confere de novo por segurança
+    // (ex.: se o admin desativou a cidade entre a checagem e o envio).
     if (!isInsideActiveServiceArea(launchRegionSettings, city, state)) {
-      toast.error(`A BICOJÁ ainda não atende ${city}/${state} nesta fase de lançamento.`);
+      setRegionStatus("unavailable");
+      setRegionCityLabel(`${city}/${state}`);
       return;
     }
     if (!termsAccepted) {
@@ -204,6 +249,60 @@ function BecomeProvider() {
     nav({ to: "/pro" });
   }
 
+  if (regionStatus === "unavailable") {
+    return (
+      <PhoneFrame>
+        <AppHeader title="Tornar-se prestador" back="/profile" />
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
+          <MapPinOff className="h-12 w-12 text-muted-foreground" />
+          <p className="font-semibold">Ainda não atendemos {regionCityLabel}</p>
+          <p className="text-sm text-muted-foreground">
+            Por enquanto a BICOJÁ está disponível só nas cidades do piloto de lançamento. Assim que
+            expandirmos pra sua região, você vai poder se cadastrar como prestador.
+          </p>
+          <button
+            onClick={() => setRegionStatus("unchecked")}
+            className="h-12 px-6 rounded-2xl border border-border font-semibold flex items-center justify-center"
+          >
+            Verificar outro CEP
+          </button>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
+  if (regionStatus === "unchecked") {
+    return (
+      <PhoneFrame>
+        <AppHeader title="Tornar-se prestador" back="/profile" />
+        <div className="flex-1 px-5 py-5 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Antes de continuar, confirme o CEP de onde você atende — assim já sabemos se a BICOJÁ
+            está disponível na sua região.
+          </p>
+          <div className="flex gap-2">
+            <input
+              value={regionCep}
+              onChange={(event) => setRegionCep(formatCep(event.target.value))}
+              placeholder="CEP 00000-000"
+              inputMode="numeric"
+              className="flex-1 h-12 px-3 rounded-xl bg-card border border-border text-sm outline-none"
+            />
+            <button
+              onClick={checkRegion}
+              disabled={
+                checkingRegion || loadingRegionSettings || regionCep.replace(/\D/g, "").length !== 8
+              }
+              className="h-12 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40"
+            >
+              {checkingRegion ? "Verificando..." : "Verificar"}
+            </button>
+          </div>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
   return (
     <PhoneFrame>
       <AppHeader title="Tornar-se prestador" back="/profile" />
@@ -264,7 +363,7 @@ function BecomeProvider() {
             <div>
               <p className="text-sm font-semibold">Onde você atende?</p>
               <p className="text-[11px] text-muted-foreground">
-                Endereço completo obrigatório para ordenar pedidos por proximidade.
+                Confirme ou ajuste o endereço encontrado pelo CEP.
               </p>
             </div>
             <button

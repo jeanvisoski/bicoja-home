@@ -87,7 +87,13 @@ function Login() {
   const nav = useNavigate();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const { data: categories = [] } = useCategories();
-  const { data: launchRegionSettings } = useLaunchRegionSettings();
+  const { data: launchRegionSettings, isLoading: loadingRegionSettings } =
+    useLaunchRegionSettings();
+  const [regionChecked, setRegionChecked] = useState(false);
+  const [regionUnavailable, setRegionUnavailable] = useState(false);
+  const [regionCep, setRegionCep] = useState("");
+  const [checkingRegion, setCheckingRegion] = useState(false);
+  const [regionCityLabel, setRegionCityLabel] = useState("");
 
   const strength = passwordStrength(password);
 
@@ -140,6 +146,36 @@ function Login() {
       setAddressError(error instanceof Error ? error.message : "Não foi possível consultar o CEP.");
     }
     setCepLoading(false);
+  }
+
+  async function checkRegion() {
+    setCheckingRegion(true);
+    try {
+      const found = await lookupCep(regionCep);
+      const available = isInsideActiveServiceArea(launchRegionSettings, found.city, found.state);
+      setRegionCityLabel(`${found.city}/${found.state}`);
+      if (!available) {
+        setRegionUnavailable(true);
+        setCheckingRegion(false);
+        return;
+      }
+      setCep(regionCep);
+      setStreet(found.street);
+      setNeighborhood(found.neighborhood);
+      setCity(found.city);
+      setState(found.state);
+      const geocoded = await geocodeAddressText(
+        `${found.street}, ${found.city}, ${found.state}, Brasil`,
+      );
+      if (geocoded) {
+        setLat(geocoded.lat);
+        setLng(geocoded.lng);
+      }
+      setRegionChecked(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível consultar o CEP.");
+    }
+    setCheckingRegion(false);
   }
 
   async function forgotPassword() {
@@ -448,6 +484,75 @@ function Login() {
               <p className="text-xs text-muted-foreground">Sou prestador</p>
             </div>
           </button>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
+  // Prestador: confirma disponibilidade de região ANTES de mostrar o resto do
+  // cadastro -- sem isso dava pra preencher tudo e só descobrir no fim (ou
+  // nem descobrir, se a checagem de região ainda estivesse carregando).
+  if (mode === "criar" && role === "prestador" && regionUnavailable) {
+    return (
+      <PhoneFrame>
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-4">
+          <MapPin className="h-12 w-12 text-muted-foreground" />
+          <p className="font-semibold">Ainda não atendemos {regionCityLabel}</p>
+          <p className="text-sm text-muted-foreground">
+            Por enquanto a BICOJÁ está disponível só nas cidades do piloto de lançamento. Assim que
+            expandirmos pra sua região, você vai poder se cadastrar como prestador.
+          </p>
+          <button
+            onClick={() => {
+              setRegionUnavailable(false);
+              setRegionCep("");
+            }}
+            className="h-12 px-6 rounded-2xl border border-border font-semibold flex items-center justify-center"
+          >
+            Verificar outro CEP
+          </button>
+          <button onClick={() => setRole(null)} className="text-sm text-muted-foreground">
+            Voltar
+          </button>
+        </div>
+      </PhoneFrame>
+    );
+  }
+
+  if (mode === "criar" && role === "prestador" && !regionChecked) {
+    return (
+      <PhoneFrame>
+        <div className="flex-1 flex flex-col px-6 pt-14 pb-8">
+          <button
+            onClick={() => setRole(null)}
+            className="flex items-center gap-1 text-sm text-muted-foreground -ml-2 mb-6"
+          >
+            <ChevronLeft className="h-4 w-4" /> Voltar
+          </button>
+          <h1 className="text-2xl font-extrabold tracking-tight font-[Manrope] mb-1">
+            Onde você atende?
+          </h1>
+          <p className="text-muted-foreground text-sm mb-8">
+            Confirme o CEP pra sabermos se a BICOJÁ já está disponível na sua região.
+          </p>
+          <div className="flex gap-2">
+            <input
+              value={regionCep}
+              onChange={(event) => setRegionCep(formatCep(event.target.value))}
+              placeholder="CEP 00000-000"
+              inputMode="numeric"
+              className="flex-1 h-12 px-3 rounded-xl bg-card border border-border text-sm outline-none"
+            />
+            <button
+              onClick={checkRegion}
+              disabled={
+                checkingRegion || loadingRegionSettings || regionCep.replace(/\D/g, "").length !== 8
+              }
+              className="h-12 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-40"
+            >
+              {checkingRegion ? "Verificando..." : "Verificar"}
+            </button>
+          </div>
         </div>
       </PhoneFrame>
     );
