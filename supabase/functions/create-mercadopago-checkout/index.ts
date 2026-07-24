@@ -59,6 +59,28 @@ Deno.serve(async (request) => {
     if (!accessToken)
       throw new Error("Credencial do Mercado Pago nao configurada para este ambiente.");
 
+    // Se já existe um checkout pendente pra este pedido, reaproveita o mesmo
+    // link em vez de criar uma nova preferencia -- evita que o cliente pague
+    // duas vezes quando volta da tela do Mercado Pago (ex.: Pix "pendente"
+    // redireciona de volta e o cliente tenta pagar de novo antes do webhook
+    // confirmar o primeiro).
+    const { data: existingTransaction } = await admin
+      .from("payment_transactions")
+      .select("checkout_url, method, mode")
+      .eq("order_id", order.id)
+      .eq("status", "pending")
+      .maybeSingle();
+    if (
+      existingTransaction?.checkout_url &&
+      existingTransaction.method === method &&
+      existingTransaction.mode === settings.payment_mode
+    ) {
+      return Response.json(
+        { checkoutUrl: existingTransaction.checkout_url },
+        { headers: corsHeaders },
+      );
+    }
+
     const appUrl = settings.app_url || request.headers.get("origin") || "";
     const excludedPaymentTypes =
       method === "pix"
@@ -85,8 +107,12 @@ Deno.serve(async (request) => {
         back_urls: appUrl
           ? {
               success: `${appUrl}/tracking?orderId=${order.id}`,
+              // "pending" significa que o pagamento ja foi iniciado (ex.: Pix
+              // aguardando confirmacao) -- manda pra tracking, nao de volta
+              // pro formulario de pagamento, senao o cliente tenta pagar de
+              // novo antes do webhook confirmar a primeira tentativa.
+              pending: `${appUrl}/tracking?orderId=${order.id}`,
               failure: `${appUrl}/payment?orderId=${order.id}`,
-              pending: `${appUrl}/payment?orderId=${order.id}`,
             }
           : undefined,
         auto_return: "approved",

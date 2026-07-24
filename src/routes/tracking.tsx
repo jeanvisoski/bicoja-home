@@ -76,7 +76,11 @@ function useOrder(orderId: string | undefined) {
       return data;
     },
     enabled: !!orderId,
-    refetchInterval: 10_000,
+    // Enquanto o webhook do Mercado Pago ainda não confirmou o pagamento,
+    // consulta com mais frequência pra não deixar o cliente esperando à toa
+    // numa tela parada.
+    refetchInterval: (query) =>
+      query.state.data?.status === "aguardando_pagamento" ? 3_000 : 10_000,
   });
 }
 
@@ -100,6 +104,8 @@ function Tracking() {
   const mapLng = address?.lng ?? liveLocation?.lng ?? provider?.lng ?? null;
   const showLiveProvider = address?.lat != null && address?.lng != null && liveLocation != null;
   const trackingMessage: Record<string, string> = {
+    aguardando_pagamento:
+      "Confirmando seu pagamento com o Mercado Pago... isso pode levar alguns segundos.",
     aceito: "Pedido confirmado. Aguarde o prestador informar a saída.",
     a_caminho: `${providerName} está a caminho`,
     executando: `${providerName} está executando o serviço`,
