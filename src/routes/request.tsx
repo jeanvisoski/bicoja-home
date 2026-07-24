@@ -258,6 +258,19 @@ function RequestFlow() {
     setCategoryId((preselected ?? categories[0]).id);
   }, [categories, preselectedSlug, categoryId]);
 
+  // Quando o cliente já chegou aqui a partir do perfil de um prestador com um
+  // serviço específico escolhido, a categoria já está decidida -- pular a
+  // etapa de seleção em vez de fazer o cliente escolher de novo.
+  const [categoryStepSkipped, setCategoryStepSkipped] = useState(false);
+  useEffect(() => {
+    if (draft || categoryStepSkipped || step !== 0) return;
+    if (!providerId || !preselectedSlug || categories.length === 0) return;
+    if (categories.some((c) => c.slug === preselectedSlug)) {
+      setCategoryStepSkipped(true);
+      setStep(1);
+    }
+  }, [draft, categoryStepSkipped, step, providerId, preselectedSlug, categories]);
+
   useEffect(() => {
     if (!defaults || usingOtherAddress || street) return;
     const address = defaults.address;
@@ -480,7 +493,15 @@ function RequestFlow() {
     if (step === STEPS.length - 1) submit();
     else setStep(step + 1);
   };
-  const back = () => (step === 0 ? nav({ to: "/home" }) : setStep(step - 1));
+  const back = () => {
+    if (step === 0) {
+      nav({ to: "/home" });
+    } else if (step === 1 && categoryStepSkipped && providerId) {
+      nav({ to: "/providers/$providerId", params: { providerId } });
+    } else {
+      setStep(step - 1);
+    }
+  };
 
   return (
     <PhoneFrame>
@@ -506,6 +527,15 @@ function RequestFlow() {
       </header>
 
       <div className="flex-1 overflow-y-auto px-5 pt-6 pb-32">
+        {providerId && (
+          <div className="mb-5 rounded-2xl bg-primary/5 border border-primary/20 p-3 text-xs font-semibold text-primary">
+            Solicitando direto com{" "}
+            {preferredProvider?.profiles?.full_name ??
+              preferredProvider?.headline ??
+              "este prestador"}
+            . Só ele verá e responderá este pedido.
+          </div>
+        )}
         {step === 0 && (
           <div className="animate-float-up">
             <h2 className="text-2xl font-extrabold font-[Manrope] leading-tight mb-1">
