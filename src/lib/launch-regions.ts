@@ -24,6 +24,11 @@ export function isInsideActiveServiceArea(
   );
 }
 
+const NO_RESTRICTION: LaunchRegionSettings = {
+  launch_regions_enabled: false,
+  active_service_regions: [],
+};
+
 export function useLaunchRegionSettings() {
   return useQuery({
     queryKey: ["launch-region-settings"],
@@ -34,9 +39,11 @@ export function useLaunchRegionSettings() {
         .eq("id", true)
         .maybeSingle<LaunchRegionSettings>();
       // A ausência da migration não deve impedir o app antes da atualização.
-      if (error?.code === "42703") return undefined;
+      // React Query não aceita queryFn retornando undefined, então o
+      // "sem restrição" vira um valor de verdade, não a ausência dele.
+      if (error?.code === "42703") return NO_RESTRICTION;
       if (error) throw error;
-      return data ?? undefined;
+      return data ?? NO_RESTRICTION;
     },
   });
 }
