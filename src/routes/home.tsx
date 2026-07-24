@@ -10,6 +10,7 @@ import { useCategories, categoryIcon } from "@/lib/categories";
 import { useUnreadCount } from "@/lib/notifications";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { getViewMode } from "@/lib/view-mode";
 
 export const Route = createFileRoute("/home")({
   component: Home,
@@ -139,11 +140,16 @@ function Home() {
   const { data: activeOrder } = useActiveOrder();
   const { data: unreadCount = 0 } = useUnreadCount(session?.user.id);
 
-  useEffect(() => {
-    if (isProvider) nav({ to: "/pro", replace: true });
-  }, [isProvider, nav]);
+  // Conta que é só prestador (nunca virou dual-role) continua indo direto
+  // pro painel de prestador. Quem já é cliente e prestador, e escolheu ver
+  // como cliente pelo alternador, fica aqui em vez de ser jogado de volta.
+  const viewingAsClient = getViewMode() === "cliente";
 
-  if (checkingRole || isProvider) {
+  useEffect(() => {
+    if (isProvider && !viewingAsClient) nav({ to: "/pro", replace: true });
+  }, [isProvider, viewingAsClient, nav]);
+
+  if (checkingRole || (isProvider && !viewingAsClient)) {
     return (
       <PhoneFrame>
         <AppHeader title="Início" back={false} />
