@@ -24,6 +24,7 @@ import { uploadPhoto } from "@/lib/storage";
 import { locateCurrentAddress } from "@/lib/geocode";
 import { lookupCep, formatCep, geocodeAddressText } from "@/lib/cep";
 import { ensureProfile } from "@/lib/profile";
+import { isInsideActiveServiceArea, useLaunchRegionSettings } from "@/lib/launch-regions";
 
 export const Route = createFileRoute("/request")({
   component: RequestFlow,
@@ -64,46 +65,6 @@ type SavedAddress = {
   lng: number | null;
   is_default: boolean;
 };
-
-type ServiceArea = { city: string; state: string };
-type LaunchRegionSettings = {
-  launch_regions_enabled: boolean;
-  active_service_regions: ServiceArea[];
-};
-
-function normalizeAreaPart(value: string) {
-  return value.trim().toLocaleLowerCase("pt-BR");
-}
-
-function isInsideActiveServiceArea(
-  settings: LaunchRegionSettings | undefined,
-  city: string,
-  state: string,
-) {
-  if (!settings?.launch_regions_enabled) return true;
-  return settings.active_service_regions.some(
-    (region) =>
-      normalizeAreaPart(region.city) === normalizeAreaPart(city) &&
-      normalizeAreaPart(region.state) === normalizeAreaPart(state),
-  );
-}
-
-function useLaunchRegionSettings() {
-  return useQuery({
-    queryKey: ["launch-region-settings"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("platform_settings")
-        .select("launch_regions_enabled, active_service_regions")
-        .eq("id", true)
-        .maybeSingle<LaunchRegionSettings>();
-      // A ausência da migration não deve impedir pedidos antes da atualização.
-      if (error?.code === "42703") return undefined;
-      if (error) throw error;
-      return data ?? undefined;
-    },
-  });
-}
 
 function useRequestDefaults(userId: string | undefined) {
   return useQuery({

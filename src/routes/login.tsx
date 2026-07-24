@@ -26,6 +26,7 @@ import { formatCep, geocodeAddressText, lookupCep } from "@/lib/cep";
 import { getCurrentPosition, reverseGeocode } from "@/lib/geocode";
 import { categoryIcon, useCategories } from "@/lib/categories";
 import { CLIENT_TERMS_VERSION, PROVIDER_TERMS_VERSION } from "@/lib/terms-versions";
+import { isInsideActiveServiceArea, useLaunchRegionSettings } from "@/lib/launch-regions";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -85,6 +86,7 @@ function Login() {
   const nav = useNavigate();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const { data: categories = [] } = useCategories();
+  const { data: launchRegionSettings } = useLaunchRegionSettings();
 
   const strength = passwordStrength(password);
 
@@ -205,6 +207,10 @@ function Login() {
           lng == null
         ) {
           toast.error("Preencha o endereço completo e confirme a localização pelo GPS ou CEP.");
+          return;
+        }
+        if (!isInsideActiveServiceArea(launchRegionSettings, city, state)) {
+          toast.error(`A BICOJÁ ainda não atende ${city}/${state} nesta fase de lançamento.`);
           return;
         }
       }
