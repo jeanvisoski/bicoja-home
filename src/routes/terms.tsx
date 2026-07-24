@@ -37,7 +37,12 @@ function Terms() {
             para serviço iniciado pela BICOJÁ. Tentativas de desvio podem gerar advertência, perda
             de destaque, suspensão ou encerramento da conta. Prestadores também aceitam, em um
             documento próprio, o{" "}
-            <Link to="/provider-terms" className="text-primary font-semibold">
+            <Link
+              to="/provider-terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-semibold"
+            >
               Contrato de Prestação de Serviço Autônomo
             </Link>
             , que detalha a natureza da relação, repasse e responsabilidades.

@@ -843,7 +843,12 @@ function Login() {
               />{" "}
               <span>
                 Li e aceito os{" "}
-                <Link to="/terms" className="text-primary font-semibold">
+                <Link
+                  to="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-semibold"
+                >
                   Termos de Uso e regras de pagamento protegido
                 </Link>
                 .
@@ -860,7 +865,12 @@ function Login() {
               />{" "}
               <span>
                 Li e aceito o{" "}
-                <Link to="/provider-terms" className="text-primary font-semibold">
+                <Link
+                  to="/provider-terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary font-semibold"
+                >
                   Contrato de Prestação de Serviço Autônomo
                 </Link>
                 .

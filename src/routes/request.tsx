@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Camera,
+  ImagePlus,
+  Loader2,
   MapPin,
   Clock,
   Calendar,
@@ -105,6 +107,45 @@ const URGENCY_OPTIONS = [
   { label: "Sem pressa", value: "sem_pressa", desc: "Quando for possível", icon: CalendarDays },
 ] as const;
 
+const DRAFT_KEY = "bicoja_request_draft";
+
+type RequestDraft = {
+  step: number;
+  categoryId: string | null;
+  desc: string;
+  photos: string[];
+  street: string;
+  houseNumber: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  lat: number | null;
+  lng: number | null;
+  cep: string;
+  urgency: string | null;
+  availabilityStart: string;
+  availabilityEnd: string;
+  availabilityStartTime: string;
+  availabilityEndTime: string;
+  contactName: string;
+  contactPhone: string;
+  attendeeName: string;
+};
+
+function loadDraft(): RequestDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(DRAFT_KEY);
+    return raw ? (JSON.parse(raw) as RequestDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function clearDraft() {
+  window.sessionStorage.removeItem(DRAFT_KEY);
+}
+
 function RequestFlow() {
   const nav = useNavigate();
   const { category: preselectedSlug, providerId } = Route.useSearch();
@@ -114,37 +155,92 @@ function RequestFlow() {
   const { data: defaults } = useRequestDefaults(session?.user.id);
   const { data: launchRegions } = useLaunchRegionSettings();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const locateAttemptRef = useRef(0);
+  const draft = useRef(loadDraft()).current;
 
-  const [step, setStep] = useState(0);
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [desc, setDesc] = useState("");
-  const [photos, setPhotos] = useState<string[]>([]);
+  // Recarregar a página no meio do fluxo não deve voltar pra categoria --
+  // restaura o rascunho salvo (sessionStorage) se existir um.
+  const [step, setStep] = useState(draft?.step ?? 0);
+  const [categoryId, setCategoryId] = useState<string | null>(draft?.categoryId ?? null);
+  const [desc, setDesc] = useState(draft?.desc ?? "");
+  const [photos, setPhotos] = useState<string[]>(draft?.photos ?? []);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [street, setStreet] = useState("");
-  const [houseNumber, setHouseNumber] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [lat, setLat] = useState<number | null>(null);
-  const [lng, setLng] = useState<number | null>(null);
+  const [street, setStreet] = useState(draft?.street ?? "");
+  const [houseNumber, setHouseNumber] = useState(draft?.houseNumber ?? "");
+  const [neighborhood, setNeighborhood] = useState(draft?.neighborhood ?? "");
+  const [city, setCity] = useState(draft?.city ?? "");
+  const [state, setState] = useState(draft?.state ?? "");
+  const [lat, setLat] = useState<number | null>(draft?.lat ?? null);
+  const [lng, setLng] = useState<number | null>(draft?.lng ?? null);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState<string | null>(null);
   const [editingAddress, setEditingAddress] = useState(false);
   const [usingOtherAddress, setUsingOtherAddress] = useState(false);
-  const [cep, setCep] = useState("");
+  const [cep, setCep] = useState(draft?.cep ?? "");
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
-  const [urgency, setUrgency] = useState<(typeof URGENCY_OPTIONS)[number]["value"] | null>(null);
-  const [availabilityStart, setAvailabilityStart] = useState("");
-  const [availabilityEnd, setAvailabilityEnd] = useState("");
-  const [availabilityStartTime, setAvailabilityStartTime] = useState("");
-  const [availabilityEndTime, setAvailabilityEndTime] = useState("");
-  const [contactName, setContactName] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [attendeeName, setAttendeeName] = useState("");
+  const [urgency, setUrgency] = useState<(typeof URGENCY_OPTIONS)[number]["value"] | null>(
+    (draft?.urgency as (typeof URGENCY_OPTIONS)[number]["value"] | null) ?? null,
+  );
+  const [availabilityStart, setAvailabilityStart] = useState(draft?.availabilityStart ?? "");
+  const [availabilityEnd, setAvailabilityEnd] = useState(draft?.availabilityEnd ?? "");
+  const [availabilityStartTime, setAvailabilityStartTime] = useState(
+    draft?.availabilityStartTime ?? "",
+  );
+  const [availabilityEndTime, setAvailabilityEndTime] = useState(draft?.availabilityEndTime ?? "");
+  const [contactName, setContactName] = useState(draft?.contactName ?? "");
+  const [contactPhone, setContactPhone] = useState(draft?.contactPhone ?? "");
+  const [attendeeName, setAttendeeName] = useState(draft?.attendeeName ?? "");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const nextDraft: RequestDraft = {
+      step,
+      categoryId,
+      desc,
+      photos,
+      street,
+      houseNumber,
+      neighborhood,
+      city,
+      state,
+      lat,
+      lng,
+      cep,
+      urgency,
+      availabilityStart,
+      availabilityEnd,
+      availabilityStartTime,
+      availabilityEndTime,
+      contactName,
+      contactPhone,
+      attendeeName,
+    };
+    window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(nextDraft));
+  }, [
+    step,
+    categoryId,
+    desc,
+    photos,
+    street,
+    houseNumber,
+    neighborhood,
+    city,
+    state,
+    lat,
+    lng,
+    cep,
+    urgency,
+    availabilityStart,
+    availabilityEnd,
+    availabilityStartTime,
+    availabilityEndTime,
+    contactName,
+    contactPhone,
+    attendeeName,
+  ]);
 
   useEffect(() => {
     if (categoryId || categories.length === 0) return;
@@ -355,6 +451,7 @@ function RequestFlow() {
     }
 
     setSubmitting(false);
+    clearDraft();
     nav({ to: "/proposals", search: { requestId: request.id } });
   }
 
@@ -377,9 +474,7 @@ function RequestFlow() {
             </p>
             <p className="text-sm font-semibold">{STEPS[step]}</p>
           </div>
-          <Link to="/orders" className="text-xs font-semibold text-primary px-1">
-            Pedidos
-          </Link>
+          <div className="w-8" />
         </div>
         <div className="h-1 bg-muted mx-4 rounded-full overflow-hidden">
           <div
@@ -450,6 +545,14 @@ function RequestFlow() {
               Até 10 fotos ajudam o prestador a entender.
             </p>
             <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handlePickPhoto}
+            />
+            <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
@@ -458,15 +561,27 @@ function RequestFlow() {
             />
             <div className="grid grid-cols-3 gap-2">
               <button
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => cameraInputRef.current?.click()}
                 disabled={uploadingPhoto || photos.length >= 10}
                 className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
               >
                 <Camera className="h-6 w-6" />
-                <span className="text-[11px] font-medium">
-                  {uploadingPhoto ? "Enviando..." : "Adicionar"}
-                </span>
+                <span className="text-[11px] font-medium">Câmera</span>
               </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto || photos.length >= 10}
+                className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+              >
+                <ImagePlus className="h-6 w-6" />
+                <span className="text-[11px] font-medium">Galeria</span>
+              </button>
+              {uploadingPhoto && (
+                <div className="aspect-square rounded-2xl border border-border bg-secondary/40 flex flex-col items-center justify-center gap-1">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <span className="text-[11px] font-medium text-muted-foreground">Enviando...</span>
+                </div>
+              )}
               {photos.map((url, i) => (
                 <div key={url} className="relative aspect-square rounded-2xl overflow-hidden">
                   <img src={url} alt="" className="h-full w-full object-cover" />

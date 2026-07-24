@@ -14,6 +14,7 @@ import {
   CalendarClock,
   Send,
   Inbox,
+  Loader2,
 } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
@@ -674,6 +675,14 @@ function ProOrder() {
                   <Images className="h-6 w-6" />
                   <span className="text-[11px] font-medium">Biblioteca</span>
                 </button>
+                {uploadingPhoto && (
+                  <div className="aspect-square rounded-2xl border border-border bg-secondary/40 flex flex-col items-center justify-center gap-1">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      Enviando...
+                    </span>
+                  </div>
+                )}
                 {photos.map((url) => (
                   <div key={url} className="aspect-square rounded-2xl overflow-hidden">
                     <img src={url} alt="" className="h-full w-full object-cover" />

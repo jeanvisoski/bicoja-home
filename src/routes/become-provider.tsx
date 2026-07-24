@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -493,7 +493,18 @@ function BecomeProvider() {
             onChange={(e) => setTermsAccepted(e.target.checked)}
             className="mt-0.5"
           />{" "}
-          <span>Li e aceito o Contrato de Prestação de Serviço Autônomo.</span>
+          <span>
+            Li e aceito o{" "}
+            <Link
+              to="/provider-terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-semibold"
+            >
+              Contrato de Prestação de Serviço Autônomo
+            </Link>
+            .
+          </span>
         </label>
       </div>
       <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-background/0 pt-8">
