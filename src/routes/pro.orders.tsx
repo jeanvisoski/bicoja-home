@@ -269,6 +269,15 @@ function ProOrder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order?.status, orderId, session?.user.id]);
 
+  // Preço fechado não precisa ser reinformado -- já foi acordado e pago.
+  // Só faixa de valor exige confirmar o total real dentro do intervalo aceito.
+  useEffect(() => {
+    if (order?.pricing_type === "fixed" && !finalPrice) {
+      setFinalPrice(String(order.quoted_price_min));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.pricing_type, order?.quoted_price_min]);
+
   // Pré-preenche com a janela que o cliente informou -- o prestador confirma
   // ou ajusta a data/horário real dentro (ou perto) dela ao enviar o orçamento.
   useEffect(() => {
@@ -611,84 +620,117 @@ function ProOrder() {
                   </p>
                 )}
               </div>
-              <div className="rounded-2xl bg-trust-soft/50 border border-trust/20 p-4 space-y-2">
-                <p className="text-sm font-semibold">Valor final do serviço</p>
-                <p className="text-xs text-muted-foreground">
-                  {order?.pricing_type === "range"
-                    ? `Faixa aceita: R$ ${Number(order.quoted_price_min).toFixed(2)} a R$ ${Number(order.quoted_price_max).toFixed(2)}.`
-                    : `Valor fechado aceito: R$ ${Number(order?.quoted_price_min ?? 0).toFixed(2)}.`}{" "}
-                  Informe o total antes de enviar a conclusão.
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">R$</span>
-                  <input
-                    value={finalPrice}
-                    onChange={(e) => setFinalPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                    placeholder="Total realizado"
-                    inputMode="decimal"
-                    className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                  />
+
+              {status === "aceito" && (
+                <div className="rounded-2xl bg-trust-soft/50 border border-trust/20 p-4">
+                  <p className="text-sm font-semibold">Pedido confirmado</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Quando sair para atender, toque em "Estou a caminho" abaixo. O cliente vai
+                    acompanhar sua localização em tempo real.
+                  </p>
                 </div>
-              </div>
-              <div className="rounded-2xl bg-card border border-border p-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">
-                  Status: {status}
-                </p>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Observações para o cliente..."
-                  className="w-full h-24 p-3 rounded-xl bg-background border border-border text-sm resize-none outline-none"
-                />
-              </div>
-              <input
-                ref={libraryInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handlePickPhoto}
-              />
-              <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handlePickPhoto}
-              />
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  onClick={() => cameraInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-                >
-                  <Camera className="h-6 w-6" />
-                  <span className="text-[11px] font-medium">
-                    {uploadingPhoto ? "Enviando..." : "Foto do serviço"}
-                  </span>
-                </button>
-                <button
-                  onClick={() => libraryInputRef.current?.click()}
-                  disabled={uploadingPhoto}
-                  className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-                >
-                  <Images className="h-6 w-6" />
-                  <span className="text-[11px] font-medium">Biblioteca</span>
-                </button>
-                {uploadingPhoto && (
-                  <div className="aspect-square rounded-2xl border border-border bg-secondary/40 flex flex-col items-center justify-center gap-1">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    <span className="text-[11px] font-medium text-muted-foreground">
-                      Enviando...
-                    </span>
+              )}
+
+              {status === "a_caminho" && (
+                <div className="rounded-2xl bg-trust-soft/50 border border-trust/20 p-4">
+                  <p className="text-sm font-semibold">Você está a caminho</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Sua localização está sendo compartilhada com o cliente. Ao chegar e começar o
+                    serviço, toque em "Iniciar serviço".
+                  </p>
+                </div>
+              )}
+
+              {status === "executando" && (
+                <>
+                  <div className="rounded-2xl bg-trust-soft/50 border border-trust/20 p-4 space-y-2">
+                    <p className="text-sm font-semibold">Valor final do serviço</p>
+                    {order?.pricing_type === "range" ? (
+                      <>
+                        <p className="text-xs text-muted-foreground">
+                          Faixa aceita: R$ {Number(order.quoted_price_min).toFixed(2)} a R${" "}
+                          {Number(order.quoted_price_max).toFixed(2)}. Informe o total real dentro
+                          dessa faixa antes de enviar a conclusão.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">R$</span>
+                          <input
+                            value={finalPrice}
+                            onChange={(e) => setFinalPrice(e.target.value.replace(/[^0-9.]/g, ""))}
+                            placeholder="Total realizado"
+                            inputMode="decimal"
+                            className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Valor fechado de R$ {Number(order?.quoted_price_min ?? 0).toFixed(2)}, já
+                        acordado e pago pelo cliente — nada a informar aqui.
+                      </p>
+                    )}
                   </div>
-                )}
-                {photos.map((url) => (
-                  <div key={url} className="aspect-square rounded-2xl overflow-hidden">
-                    <img src={url} alt="" className="h-full w-full object-cover" />
+                  <div className="rounded-2xl bg-card border border-border p-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">
+                      Fotos e observações da conclusão
+                    </p>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder="Observações para o cliente..."
+                      className="w-full h-24 p-3 rounded-xl bg-background border border-border text-sm resize-none outline-none"
+                    />
                   </div>
-                ))}
-              </div>
+                  <input
+                    ref={libraryInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePickPhoto}
+                  />
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handlePickPhoto}
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => cameraInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                    >
+                      <Camera className="h-6 w-6" />
+                      <span className="text-[11px] font-medium">
+                        {uploadingPhoto ? "Enviando..." : "Foto do serviço"}
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => libraryInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      className="aspect-square rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                    >
+                      <Images className="h-6 w-6" />
+                      <span className="text-[11px] font-medium">Biblioteca</span>
+                    </button>
+                    {uploadingPhoto && (
+                      <div className="aspect-square rounded-2xl border border-border bg-secondary/40 flex flex-col items-center justify-center gap-1">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                        <span className="text-[11px] font-medium text-muted-foreground">
+                          Enviando...
+                        </span>
+                      </div>
+                    )}
+                    {photos.map((url) => (
+                      <div key={url} className="aspect-square rounded-2xl overflow-hidden">
+                        <img src={url} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
 
