@@ -79,7 +79,7 @@ function NotificationsPage() {
           <button
             key={n.id}
             onClick={() => open(n)}
-            className={`w-full text-left flex items-start gap-3 p-4 rounded-2xl border ${n.read ? "bg-card border-border" : "bg-primary/5 border-primary/20"}`}
+            className={`w-full text-left flex items-start gap-3 p-4 rounded-2xl border transition-colors ${n.read ? "bg-card border-border opacity-70" : "bg-primary/10 border-primary/40 shadow-card"}`}
           >
             <div
               className={`h-9 w-9 rounded-full flex items-center justify-center shrink-0 ${n.read ? "bg-secondary text-muted-foreground" : "bg-primary text-primary-foreground"}`}
@@ -87,10 +87,25 @@ function NotificationsPage() {
               <Bell className="h-4 w-4" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold">{n.title}</p>
-              {n.body && <p className="text-xs text-muted-foreground mt-0.5">{n.body}</p>}
+              <div className="flex items-center gap-2">
+                {!n.read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
+                <p
+                  className={`text-sm truncate ${n.read ? "font-normal text-muted-foreground" : "font-bold text-foreground"}`}
+                >
+                  {n.title}
+                </p>
+              </div>
+              {n.body && (
+                <p
+                  className={`text-xs mt-0.5 ${n.read ? "text-muted-foreground/70" : "text-foreground/80"}`}
+                >
+                  {n.body}
+                </p>
+              )}
             </div>
-            <span className="text-[11px] text-muted-foreground shrink-0">
+            <span
+              className={`text-[11px] shrink-0 ${n.read ? "text-muted-foreground/70" : "text-primary font-semibold"}`}
+            >
               {timeAgo(n.created_at)}
             </span>
           </button>

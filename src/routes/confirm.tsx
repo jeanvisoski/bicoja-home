@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, AlertTriangle, Sparkles } from "lucide-react";
+import { Check, AlertTriangle, Sparkles, X } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { supabase } from "@/lib/supabase";
@@ -75,6 +75,7 @@ function Confirm() {
   const [reporting, setReporting] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [sendingDispute, setSendingDispute] = useState(false);
+  const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
   const readyForConfirmation =
     order?.status === "fotos_enviadas" || order?.status === "aguardando_confirmacao";
   const guaranteeActive =
@@ -173,12 +174,13 @@ function Confirm() {
             </h3>
             <div className="grid grid-cols-2 gap-2">
               {antes.map((p) => (
-                <img
-                  key={p.id}
-                  src={p.photo_url}
-                  alt=""
-                  className="aspect-[4/3] rounded-2xl object-cover shadow-card"
-                />
+                <button key={p.id} type="button" onClick={() => setZoomedPhoto(p.photo_url)}>
+                  <img
+                    src={p.photo_url}
+                    alt=""
+                    className="aspect-[4/3] w-full rounded-2xl object-cover shadow-card"
+                  />
+                </button>
               ))}
             </div>
           </>
@@ -190,18 +192,39 @@ function Confirm() {
         {depois.length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {depois.map((p) => (
-              <img
-                key={p.id}
-                src={p.photo_url}
-                alt=""
-                className="aspect-[4/3] rounded-2xl object-cover shadow-card"
-              />
+              <button key={p.id} type="button" onClick={() => setZoomedPhoto(p.photo_url)}>
+                <img
+                  src={p.photo_url}
+                  alt=""
+                  className="aspect-[4/3] w-full rounded-2xl object-cover shadow-card"
+                />
+              </button>
             ))}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">O prestador ainda não enviou fotos.</p>
         )}
       </div>
+
+      {zoomedPhoto && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={() => setZoomedPhoto(null)}
+        >
+          <button
+            onClick={() => setZoomedPhoto(null)}
+            className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={zoomedPhoto}
+            alt=""
+            className="max-h-full max-w-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-background/0 pt-8 space-y-2">
         {reporting && (
