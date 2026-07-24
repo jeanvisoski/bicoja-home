@@ -66,30 +66,37 @@ type SavedAddress = {
   lat: number | null;
   lng: number | null;
   is_default: boolean;
+  label: string | null;
 };
 
 function useRequestDefaults(userId: string | undefined) {
   return useQuery({
     queryKey: ["request-defaults", userId],
     queryFn: async () => {
-      const [addressResult, profileResult] = await Promise.all([
+      const [addressListResult, profileResult] = await Promise.all([
         supabase
           .from("addresses")
-          .select("id, cep, street, number, neighborhood, city, state, lat, lng, is_default")
+          .select("id, cep, street, number, neighborhood, city, state, lat, lng, is_default, label")
           .eq("profile_id", userId)
           .order("is_default", { ascending: false })
           .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle<SavedAddress>(),
+          .returns<SavedAddress[]>(),
         supabase.from("profiles").select("full_name, phone").eq("id", userId).maybeSingle(),
       ]);
-      if (addressResult.error) throw addressResult.error;
+      if (addressListResult.error) throw addressListResult.error;
       if (profileResult.error) throw profileResult.error;
-      return { address: addressResult.data, profile: profileResult.data };
+      const list = addressListResult.data ?? [];
+      return { address: list[0] ?? null, addressList: list, profile: profileResult.data };
     },
     enabled: !!userId,
   });
 }
+
+const ADDRESS_LABEL_TEXT: Record<string, string> = {
+  casa: "Casa",
+  trabalho: "Trabalho",
+  outro: "Outro",
+};
 
 const STEPS = [
   "Categoria",
@@ -177,6 +184,7 @@ function RequestFlow() {
   const [locateError, setLocateError] = useState<string | null>(null);
   const [editingAddress, setEditingAddress] = useState(false);
   const [usingOtherAddress, setUsingOtherAddress] = useState(false);
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
   const [cep, setCep] = useState(draft?.cep ?? "");
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string | null>(null);
@@ -266,6 +274,19 @@ function RequestFlow() {
     setContactName(defaults.profile?.full_name ?? "");
     setContactPhone(defaults.profile?.phone ?? "");
   }, [defaults, usingOtherAddress, street]);
+
+  function selectSavedAddress(address: SavedAddress) {
+    setStreet(address.street);
+    setHouseNumber(address.number ?? "");
+    setNeighborhood(address.neighborhood ?? "");
+    setCity(address.city);
+    setState(address.state ?? "");
+    setCep(formatCep(address.cep ?? ""));
+    setLat(address.lat);
+    setLng(address.lng);
+    setUsingOtherAddress(false);
+    setShowAddressPicker(false);
+  }
 
   async function locateMe() {
     const attempt = ++locateAttemptRef.current;
@@ -607,28 +628,65 @@ function RequestFlow() {
               Só o profissional escolhido verá o endereço completo.
             </p>
             {defaults?.address && !usingOtherAddress && (
-              <div className="mb-3 rounded-2xl bg-trust-soft/50 border border-trust/20 p-3 flex items-center justify-between gap-3">
-                <p className="text-xs">
-                  <span className="font-semibold">Usando seu endereço salvo.</span>
-                  <br />
-                  {street}, {houseNumber} · {city}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setUsingOtherAddress(true);
-                    setEditingAddress(true);
-                    setStreet("");
-                    setHouseNumber("");
-                    setNeighborhood("");
-                    setCity("");
-                    setState("");
-                    setCep("");
-                  }}
-                  className="text-xs font-semibold text-primary"
-                >
-                  Outro endereço
-                </button>
+              <div className="mb-3 rounded-2xl bg-trust-soft/50 border border-trust/20 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs">
+                    <span className="font-semibold">
+                      {defaults.address.label
+                        ? (ADDRESS_LABEL_TEXT[defaults.address.label] ??
+                          "Usando seu endereço salvo")
+                        : "Usando seu endereço salvo"}
+                      .
+                    </span>
+                    <br />
+                    {street}, {houseNumber} · {city}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsingOtherAddress(true);
+                      setEditingAddress(true);
+                      setStreet("");
+                      setHouseNumber("");
+                      setNeighborhood("");
+                      setCity("");
+                      setState("");
+                      setCep("");
+                    }}
+                    className="shrink-0 text-xs font-semibold text-primary"
+                  >
+                    Digitar novo
+                  </button>
+                </div>
+                {defaults.addressList.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAddressPicker((v) => !v)}
+                    className="text-xs font-semibold text-primary"
+                  >
+                    {showAddressPicker ? "Fechar" : "Escolher outro endereço salvo"}
+                  </button>
+                )}
+                {showAddressPicker && (
+                  <div className="space-y-1.5 pt-1">
+                    {defaults.addressList.map((address) => (
+                      <button
+                        key={address.id}
+                        type="button"
+                        onClick={() => selectSavedAddress(address)}
+                        className={`w-full text-left p-2.5 rounded-xl text-xs border ${street === address.street && city === address.city ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                      >
+                        <span className="font-semibold">
+                          {address.label
+                            ? (ADDRESS_LABEL_TEXT[address.label] ?? "Endereço")
+                            : "Endereço"}
+                        </span>
+                        {" — "}
+                        {address.street}, {address.number} · {address.city}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             <MapView
