@@ -42,6 +42,7 @@ type RequestDetail = {
   availability_end_time: string | null;
   service_categories: { label: string } | null;
   profiles: { full_name: string | null } | null;
+  request_photos: { photo_url: string }[] | null;
 };
 
 function useRequestDetail(requestId: string | undefined) {
@@ -51,7 +52,7 @@ function useRequestDetail(requestId: string | undefined) {
       const { data, error } = await supabase
         .from("service_requests")
         .select(
-          "id, description, urgency, availability_start, availability_end, availability_start_time, availability_end_time, service_categories(label), profiles(full_name)",
+          "id, description, urgency, availability_start, availability_end, availability_start_time, availability_end_time, service_categories(label), profiles(full_name), request_photos(photo_url)",
         )
         .eq("id", requestId)
         .returns<RequestDetail[]>()
@@ -83,6 +84,7 @@ type OrderDetail = {
     service_categories: { label: string } | null;
   } | null;
   profiles: { full_name: string | null } | null;
+  order_photos: { kind: string; photo_url: string }[] | null;
 };
 
 function useOrderDetail(orderId: string | undefined) {
@@ -92,7 +94,7 @@ function useOrderDetail(orderId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, status, price, platform_fee, total, pricing_type, quoted_price_min, quoted_price_max, duration_minutes, final_price, client_id, service_requests(description, contact_name, contact_phone, attendee_name, service_categories(label))",
+          "id, status, price, platform_fee, total, pricing_type, quoted_price_min, quoted_price_max, duration_minutes, final_price, client_id, service_requests(description, contact_name, contact_phone, attendee_name, service_categories(label)), order_photos(kind, photo_url)",
         )
         .eq("id", orderId)
         .returns<OrderDetail[]>()
@@ -431,6 +433,24 @@ function ProOrder() {
                 </div>
               </div>
               <p className="text-sm">{request?.description}</p>
+              {(request?.request_photos?.length ?? 0) > 0 && (
+                <div className="grid grid-cols-4 gap-2 mt-3">
+                  {request?.request_photos?.map((photo) => (
+                    <a
+                      key={photo.photo_url}
+                      href={photo.photo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <img
+                        src={photo.photo_url}
+                        alt=""
+                        className="aspect-square object-cover rounded-xl border border-border"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">
@@ -610,6 +630,26 @@ function ProOrder() {
                 </p>
                 <p className="text-xs text-muted-foreground mb-2">{order?.profiles?.full_name}</p>
                 <p className="text-sm">{order?.service_requests?.description}</p>
+                {(order?.order_photos?.filter((p) => p.kind === "antes").length ?? 0) > 0 && (
+                  <div className="grid grid-cols-4 gap-2 mt-3">
+                    {order?.order_photos
+                      ?.filter((p) => p.kind === "antes")
+                      .map((photo) => (
+                        <a
+                          key={photo.photo_url}
+                          href={photo.photo_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <img
+                            src={photo.photo_url}
+                            alt=""
+                            className="aspect-square object-cover rounded-xl border border-border"
+                          />
+                        </a>
+                      ))}
+                  </div>
+                )}
                 {order?.service_requests?.contact_name && (
                   <p className="text-xs text-muted-foreground mt-3 border-t border-border pt-3">
                     <span className="font-semibold text-foreground">Contato no local: </span>
