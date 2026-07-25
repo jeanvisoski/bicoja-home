@@ -711,7 +711,7 @@ function Login() {
               </section>
               <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
                 <p className="text-sm font-semibold">Onde você atende?</p>
-                {!editingAddress && street ? (
+                {!editingAddress && street && houseNumber ? (
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
