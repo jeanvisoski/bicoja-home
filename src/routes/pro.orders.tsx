@@ -187,8 +187,6 @@ function ProOrder() {
   const { data: myProposals = [], isLoading: loadingProposals } = useMyProposals(session?.user.id);
 
   const [price, setPrice] = useState("");
-  const [pricingType, setPricingType] = useState<"fixed" | "range">("fixed");
-  const [priceMax, setPriceMax] = useState("");
   const [eta, setEta] = useState("");
   const [duration, setDuration] = useState("");
   const [finalPrice, setFinalPrice] = useState("");
@@ -313,9 +311,8 @@ function ProOrder() {
   async function sendProposal() {
     if (!session || !requestId) return;
     const min = Number(price);
-    const max = pricingType === "range" ? Number(priceMax) : min;
-    if (!min || !max || max < min) {
-      toast.error("Informe valores válidos para o orçamento.");
+    if (!min) {
+      toast.error("Informe um valor válido para o orçamento.");
       return;
     }
     if (!scheduledDate || !scheduledStartTime || !scheduledEndTime) {
@@ -331,9 +328,9 @@ function ProOrder() {
       request_id: requestId,
       provider_id: session.user.id,
       price: min,
-      pricing_type: pricingType,
+      pricing_type: "fixed",
       price_min: min,
-      price_max: max,
+      price_max: min,
       eta_minutes: Number(eta) || null,
       duration_minutes: Number(duration) || null,
       message: note || null,
@@ -493,42 +490,15 @@ function ProOrder() {
                 <p className="text-xs uppercase font-bold text-trust tracking-widest">
                   Seu orçamento
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPricingType("fixed")}
-                    className={`h-10 rounded-xl text-xs font-semibold border ${pricingType === "fixed" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}
-                  >
-                    Valor fechado
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPricingType("range")}
-                    className={`h-10 rounded-xl text-xs font-semibold border ${pricingType === "range" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border"}`}
-                  >
-                    Faixa de valor
-                  </button>
-                </div>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <input
                     value={price}
                     onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                    placeholder={pricingType === "range" ? "Valor mínimo" : "Valor fechado"}
+                    placeholder="Valor fechado"
                     className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-lg font-bold outline-none"
                   />
                 </div>
-                {pricingType === "range" && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">até R$</span>
-                    <input
-                      value={priceMax}
-                      onChange={(e) => setPriceMax(e.target.value.replace(/[^0-9.]/g, ""))}
-                      placeholder="Valor máximo"
-                      className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-lg font-bold outline-none"
-                    />
-                  </div>
-                )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Chega em (min)</span>
                   <input
@@ -594,9 +564,7 @@ function ProOrder() {
         <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-background/0 pt-8">
           <button
             onClick={sendProposal}
-            disabled={
-              sending || !price || (pricingType === "range" && !priceMax) || !!existingProposal
-            }
+            disabled={sending || !price || !!existingProposal}
             className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 shadow-card disabled:opacity-50"
           >
             <DollarSign className="h-5 w-5" />{" "}
