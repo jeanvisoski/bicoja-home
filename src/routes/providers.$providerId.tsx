@@ -66,6 +66,26 @@ function useProviderServices(providerId: string | undefined) {
   });
 }
 
+type PortfolioPhoto = { id: string; photo_url: string };
+
+function usePortfolioPhotos(providerId: string | undefined) {
+  return useQuery({
+    queryKey: ["public-provider-portfolio", providerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_photos")
+        .select("id, photo_url, orders!inner(provider_id)")
+        .eq("is_portfolio", true)
+        .eq("orders.provider_id", providerId)
+        .order("created_at", { ascending: false })
+        .returns<PortfolioPhoto[]>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!providerId,
+  });
+}
+
 type Review = {
   id: string;
   stars: number;
@@ -96,6 +116,7 @@ function PublicProviderProfile() {
   const { data: provider } = useProviderProfile(providerId);
   const { data: services = [] } = useProviderServices(providerId);
   const { data: reviews = [] } = useReviews(providerId);
+  const { data: portfolio = [] } = usePortfolioPhotos(providerId);
 
   const name = provider?.profiles?.full_name || provider?.headline || "Prestador";
 
@@ -176,6 +197,23 @@ function PublicProviderProfile() {
             })}
           </div>
         </section>
+
+        {portfolio.length > 0 && (
+          <section className="px-5 mt-6">
+            <h2 className="text-base font-bold mb-3">Trabalhos já feitos</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {portfolio.map((photo) => (
+                <a key={photo.id} href={photo.photo_url} target="_blank" rel="noopener noreferrer">
+                  <img
+                    src={photo.photo_url}
+                    alt=""
+                    className="aspect-square object-cover rounded-xl border border-border"
+                  />
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="px-5 mt-6">
           <h2 className="text-base font-bold mb-3">Últimas avaliações</h2>

@@ -13,6 +13,8 @@ import {
   MapPin,
   Pencil,
   FileText,
+  Check,
+  Images,
 } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
@@ -141,6 +143,32 @@ function useVerificationDocuments(providerId: string | undefined) {
   });
 }
 
+type CompletedJobPhoto = {
+  id: string;
+  photo_url: string;
+  is_portfolio: boolean;
+  order_id: string;
+};
+
+function useCompletedJobPhotos(providerId: string | undefined) {
+  return useQuery({
+    queryKey: ["pro-completed-photos", providerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_photos")
+        .select("id, photo_url, is_portfolio, order_id, orders!inner(provider_id, status)")
+        .eq("kind", "depois")
+        .eq("orders.provider_id", providerId)
+        .eq("orders.status", "concluido")
+        .order("created_at", { ascending: false })
+        .returns<CompletedJobPhoto[]>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!providerId,
+  });
+}
+
 function ProProfile() {
   const { session } = useSession();
   const nav = useNavigate();
@@ -150,6 +178,7 @@ function ProProfile() {
   const { data: reviews = [] } = useReviews(userId);
   const { data: services = [] } = useProviderServices(userId);
   const { data: verificationDocuments = [] } = useVerificationDocuments(userId);
+  const { data: completedPhotos = [] } = useCompletedJobPhotos(userId);
   const { data: categories = [] } = useCategories();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
@@ -358,6 +387,18 @@ function ProProfile() {
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["provider-services", userId] });
+  }
+
+  async function togglePortfolio(photo: CompletedJobPhoto) {
+    const { error } = await supabase
+      .from("order_photos")
+      .update({ is_portfolio: !photo.is_portfolio })
+      .eq("id", photo.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: ["pro-completed-photos", userId] });
   }
 
   const availableCategories = categories.filter(
@@ -701,6 +742,47 @@ function ProProfile() {
                     Adicionar
                   </button>
                 </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="px-5 mt-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Images className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-bold">Portfólio público</h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Escolha fotos de serviços concluídos pra mostrar no seu perfil público. Só as marcadas
+            aqui ficam visíveis — as demais continuam privadas do pedido.
+          </p>
+          <div className="rounded-2xl bg-card border border-border p-4">
+            {completedPhotos.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-2">
+                Depois de concluir um serviço com fotos, elas aparecem aqui pra você escolher.
+              </p>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
+                {completedPhotos.map((photo) => (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => togglePortfolio(photo)}
+                    className="relative aspect-square rounded-xl overflow-hidden"
+                  >
+                    <img src={photo.photo_url} alt="" className="h-full w-full object-cover" />
+                    <div
+                      className={`absolute inset-0 ${photo.is_portfolio ? "bg-primary/20" : "bg-black/40"}`}
+                    />
+                    <div
+                      className={`absolute top-1.5 right-1.5 h-6 w-6 rounded-full flex items-center justify-center border-2 border-white ${photo.is_portfolio ? "bg-primary" : "bg-black/30"}`}
+                    >
+                      {photo.is_portfolio && (
+                        <Check className="h-3.5 w-3.5 text-primary-foreground" />
+                      )}
+                    </div>
+                  </button>
+                ))}
               </div>
             )}
           </div>

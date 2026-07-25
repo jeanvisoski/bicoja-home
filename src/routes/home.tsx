@@ -82,11 +82,37 @@ function useFeaturedProviders() {
         .select("profile_id, rating_avg, rating_count, jobs_count, profiles(full_name, avatar_url)")
         .eq("verification_status", "verificado")
         .order("rating_avg", { ascending: false })
-        .limit(3)
+        .limit(6)
         .returns<FeaturedProvider[]>();
       if (error) throw error;
       return data;
     },
+  });
+}
+
+type PortfolioThumb = { order_id: string; photo_url: string; orders: { provider_id: string } };
+
+function usePortfolioThumbs(providerIds: string[]) {
+  return useQuery({
+    queryKey: ["featured-providers-portfolio", providerIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_photos")
+        .select("order_id, photo_url, orders!inner(provider_id)")
+        .eq("is_portfolio", true)
+        .in("orders.provider_id", providerIds)
+        .order("created_at", { ascending: false })
+        .returns<PortfolioThumb[]>();
+      if (error) throw error;
+      const byProvider = new Map<string, string>();
+      for (const photo of data) {
+        if (!byProvider.has(photo.orders.provider_id)) {
+          byProvider.set(photo.orders.provider_id, photo.photo_url);
+        }
+      }
+      return byProvider;
+    },
+    enabled: providerIds.length > 0,
   });
 }
 
@@ -153,6 +179,7 @@ function Home() {
   const greetingName = useGreetingName();
   const { data: categories = [] } = useCategories();
   const { data: pros = [] } = useFeaturedProviders();
+  const { data: portfolioThumbs } = usePortfolioThumbs(pros.map((p) => p.profile_id));
   const { data: activeOrders = [] } = useActiveOrders();
   const { data: unreadCount = 0 } = useUnreadCount(session?.user.id);
 
@@ -258,6 +285,10 @@ function Home() {
             <Plus className="h-5 w-5" /> Pedir
           </Link>
         </div>
+        <p className="px-5 mt-2 text-[11px] text-muted-foreground">
+          Escolha um prestador abaixo pra contratar direto, ou toque em "Pedir" pra abrir sua
+          solicitação pra todos os prestadores da categoria.
+        </p>
 
         {/* Categories */}
         <section className="mt-6">
@@ -294,35 +325,43 @@ function Home() {
         {/* Featured pros */}
         {pros.length > 0 && (
           <section className="mt-7">
-            <div className="px-5 flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold">Prestadores em destaque</h2>
+            <div className="px-5 flex items-center justify-between mb-1">
+              <h2 className="text-base font-bold">Contrate direto</h2>
               <Link to="/search" className="text-xs font-semibold text-primary">
                 Ver mais
               </Link>
             </div>
+            <p className="px-5 text-xs text-muted-foreground mb-3">
+              Veja o que eles já entregaram e contrate sem esperar propostas.
+            </p>
             <div className="flex gap-3 overflow-x-auto px-5 pb-2 [&::-webkit-scrollbar]:hidden">
               {pros.map((p) => {
                 const name = p.profiles?.full_name || "Prestador BICOJÁ";
+                const thumb = portfolioThumbs?.get(p.profile_id);
                 return (
                   <Link
                     key={p.profile_id}
                     to="/providers/$providerId"
                     params={{ providerId: p.profile_id }}
-                    className="min-w-[210px] rounded-2xl bg-card border border-border shadow-card p-4"
+                    className="min-w-[210px] rounded-2xl bg-card border border-border shadow-card overflow-hidden"
                   >
-                    <ProfileAvatar
-                      name={name}
-                      src={p.profiles?.avatar_url}
-                      className="h-14 w-14 rounded-2xl text-lg mb-3"
-                    />
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <p className="font-semibold text-sm">{name}</p>
-                      <BadgeCheck className="h-4 w-4 text-trust" />
-                    </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <Star className="h-3.5 w-3.5 fill-warn text-warn" />
-                      <span className="font-semibold">{p.rating_avg}</span>
-                      <span className="text-muted-foreground">({p.rating_count})</span>
+                    {thumb && <img src={thumb} alt="" className="h-24 w-full object-cover" />}
+                    <div className="p-4">
+                      <ProfileAvatar
+                        name={name}
+                        src={p.profiles?.avatar_url}
+                        className="h-14 w-14 rounded-2xl text-lg mb-3"
+                      />
+                      <div className="flex items-center gap-1 mb-0.5">
+                        <p className="font-semibold text-sm">{name}</p>
+                        <BadgeCheck className="h-4 w-4 text-trust" />
+                      </div>
+                      <div className="flex items-center gap-1 text-xs">
+                        <Star className="h-3.5 w-3.5 fill-warn text-warn" />
+                        <span className="font-semibold">{p.rating_avg}</span>
+                        <span className="text-muted-foreground">({p.rating_count})</span>
+                        <span className="text-muted-foreground">• {p.jobs_count} serviços</span>
+                      </div>
                     </div>
                   </Link>
                 );
