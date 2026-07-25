@@ -79,6 +79,10 @@ function Login() {
   const [locating, setLocating] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
+  // O CEP da checagem de região já preenche o endereço -- só reabre o
+  // formulário se o prestador realmente precisar corrigir algo, em vez de
+  // mostrar os mesmos campos de CEP/endereço uma segunda vez em sequência.
+  const [editingAddress, setEditingAddress] = useState(false);
   const [sending, setSending] = useState(false);
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
@@ -706,87 +710,123 @@ function Login() {
                 )}
               </section>
               <section className="rounded-2xl border border-border bg-card p-4 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">Onde você atende?</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Endereço completo obrigatório para ordenar pedidos por proximidade.
-                    </p>
+                <p className="text-sm font-semibold">Onde você atende?</p>
+                {!editingAddress && street ? (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">
+                        {street}
+                        {houseNumber ? `, ${houseNumber}` : ""}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {neighborhood ? `${neighborhood} • ` : ""}
+                        {city}
+                        {state ? `/${state}` : ""}
+                      </p>
+                      {lat != null && lng != null && (
+                        <p className="text-[11px] text-trust mt-1">Localização confirmada.</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditingAddress(true)}
+                      className="shrink-0 text-xs font-semibold text-primary"
+                    >
+                      Alterar
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={locateProvider}
-                    disabled={locating}
-                    className="shrink-0 h-10 px-3 rounded-xl bg-secondary text-primary text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
-                  >
-                    <LocateFixed className="h-4 w-4" /> {locating ? "Buscando..." : "Usar GPS"}
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    value={cep}
-                    onChange={(event) => setCep(formatCep(event.target.value))}
-                    placeholder="CEP 00000-000"
-                    inputMode="numeric"
-                    className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={findCep}
-                    disabled={cepLoading || cep.replace(/\D/g, "").length !== 8}
-                    className="h-11 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
-                  >
-                    {cepLoading ? "..." : "Buscar CEP"}
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    value={street}
-                    onChange={(event) => setStreet(event.target.value)}
-                    required
-                    placeholder="Rua / avenida"
-                    className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                  />
-                  <input
-                    value={houseNumber}
-                    onChange={(event) => setHouseNumber(event.target.value)}
-                    required
-                    placeholder="Número"
-                    className="w-24 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                  />
-                </div>
-                <input
-                  value={neighborhood}
-                  onChange={(event) => setNeighborhood(event.target.value)}
-                  required
-                  placeholder="Bairro"
-                  className="w-full h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                />
-                <div className="flex gap-2">
-                  <input
-                    value={city}
-                    onChange={(event) => setCity(event.target.value)}
-                    required
-                    placeholder="Cidade"
-                    className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                  />
-                  <input
-                    value={state}
-                    onChange={(event) => setState(event.target.value.toUpperCase().slice(0, 2))}
-                    required
-                    placeholder="UF"
-                    className="w-20 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-                  />
-                </div>
-                {addressError && (
-                  <p className="text-xs text-destructive">
-                    {addressError} Preencha manualmente pelo CEP.
-                  </p>
-                )}
-                {lat != null && lng != null && (
-                  <p className="flex items-center gap-1 text-[11px] text-trust">
-                    <MapPin className="h-3.5 w-3.5" /> Localização confirmada.
-                  </p>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] text-muted-foreground flex-1">
+                        Endereço completo obrigatório para ordenar pedidos por proximidade.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={locateProvider}
+                        disabled={locating}
+                        className="shrink-0 h-10 px-3 rounded-xl bg-secondary text-primary text-xs font-semibold flex items-center gap-1 disabled:opacity-50"
+                      >
+                        <LocateFixed className="h-4 w-4" /> {locating ? "Buscando..." : "Usar GPS"}
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={cep}
+                        onChange={(event) => setCep(formatCep(event.target.value))}
+                        placeholder="CEP 00000-000"
+                        inputMode="numeric"
+                        className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={findCep}
+                        disabled={cepLoading || cep.replace(/\D/g, "").length !== 8}
+                        className="h-11 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-40"
+                      >
+                        {cepLoading ? "..." : "Buscar CEP"}
+                      </button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        value={street}
+                        onChange={(event) => setStreet(event.target.value)}
+                        required
+                        placeholder="Rua / avenida"
+                        className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                      />
+                      <input
+                        value={houseNumber}
+                        onChange={(event) => setHouseNumber(event.target.value)}
+                        required
+                        placeholder="Número"
+                        className="w-24 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                      />
+                    </div>
+                    <input
+                      value={neighborhood}
+                      onChange={(event) => setNeighborhood(event.target.value)}
+                      required
+                      placeholder="Bairro"
+                      className="w-full h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        value={city}
+                        onChange={(event) => setCity(event.target.value)}
+                        required
+                        placeholder="Cidade"
+                        className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                      />
+                      <input
+                        value={state}
+                        onChange={(event) => setState(event.target.value.toUpperCase().slice(0, 2))}
+                        required
+                        placeholder="UF"
+                        className="w-20 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                      />
+                    </div>
+                    {addressError && (
+                      <p className="text-xs text-destructive">
+                        {addressError} Preencha manualmente pelo CEP.
+                      </p>
+                    )}
+                    {lat != null && lng != null && (
+                      <p className="flex items-center gap-1 text-[11px] text-trust">
+                        <MapPin className="h-3.5 w-3.5" /> Localização confirmada.
+                      </p>
+                    )}
+                    {street && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingAddress(false)}
+                        className="text-xs font-semibold text-primary"
+                      >
+                        Concluir edição
+                      </button>
+                    )}
+                  </>
                 )}
               </section>
               <section>
