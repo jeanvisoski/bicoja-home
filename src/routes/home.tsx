@@ -292,18 +292,21 @@ function Home() {
 
         {/* Categories */}
         <section className="mt-6">
-          <div className="px-5 flex items-center justify-between mb-3">
+          <div className="px-5 flex items-center justify-between mb-1">
             <h2 className="text-base font-bold">Categorias</h2>
             <Link to="/search" className="text-xs font-semibold text-primary">
-              Ver todas
+              Ver prestadores
             </Link>
           </div>
+          <p className="px-5 text-xs text-muted-foreground mb-3">
+            Toque numa categoria pra já montar seu pedido.
+          </p>
           <div className="grid grid-cols-4 gap-3 px-5">
             {categories.map((c, i) => {
               const Icon = categoryIcon(c.icon);
               return (
                 <Link
-                  to="/search"
+                  to="/request"
                   search={{ category: c.slug }}
                   key={c.id}
                   className="flex flex-col items-center gap-1.5 group"
