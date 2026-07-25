@@ -98,15 +98,7 @@ const ADDRESS_LABEL_TEXT: Record<string, string> = {
   outro: "Outro",
 };
 
-const STEPS = [
-  "Categoria",
-  "Descrição",
-  "Fotos",
-  "Endereço",
-  "Disponibilidade",
-  "Contato",
-  "Confirmar",
-];
+const STEPS = ["Categoria", "Detalhes", "Endereço", "Disponibilidade", "Confirmar"];
 
 const URGENCY_OPTIONS = [
   { label: "Hoje", value: "hoje", desc: "Preciso agora", icon: Clock },
@@ -118,6 +110,7 @@ const DRAFT_KEY = "bicoja_request_draft";
 
 type RequestDraft = {
   step: number;
+  categorySlug: string | undefined;
   categoryId: string | null;
   desc: string;
   photos: string[];
@@ -139,11 +132,18 @@ type RequestDraft = {
   attendeeName: string;
 };
 
-function loadDraft(): RequestDraft | null {
+function loadDraft(currentCategorySlug: string | undefined): RequestDraft | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.sessionStorage.getItem(DRAFT_KEY);
-    return raw ? (JSON.parse(raw) as RequestDraft) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as RequestDraft;
+    // Um link novo com categoria diferente (ou nova) da do rascunho salvo é
+    // uma nova intenção do cliente, não uma continuação -- descarta o
+    // rascunho velho pra não pular o "pular categoria" e voltar a perguntar
+    // de novo (era exatamente essa a reclamação de repetição).
+    if (currentCategorySlug && parsed.categorySlug !== currentCategorySlug) return null;
+    return parsed;
   } catch {
     return null;
   }
@@ -164,7 +164,7 @@ function RequestFlow() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const locateAttemptRef = useRef(0);
-  const draft = useRef(loadDraft()).current;
+  const draft = useRef(loadDraft(preselectedSlug)).current;
 
   // Recarregar a página no meio do fluxo não deve voltar pra categoria --
   // restaura o rascunho salvo (sessionStorage) se existir um.
@@ -206,6 +206,7 @@ function RequestFlow() {
   useEffect(() => {
     const nextDraft: RequestDraft = {
       step,
+      categorySlug: preselectedSlug,
       categoryId,
       desc,
       photos,
@@ -229,6 +230,7 @@ function RequestFlow() {
     window.sessionStorage.setItem(DRAFT_KEY, JSON.stringify(nextDraft));
   }, [
     step,
+    preselectedSlug,
     categoryId,
     desc,
     photos,
@@ -258,18 +260,23 @@ function RequestFlow() {
     setCategoryId((preselected ?? categories[0]).id);
   }, [categories, preselectedSlug, categoryId]);
 
-  // Quando o cliente já chegou aqui a partir do perfil de um prestador com um
-  // serviço específico escolhido, a categoria já está decidida -- pular a
-  // etapa de seleção em vez de fazer o cliente escolher de novo.
-  const [categoryStepSkipped, setCategoryStepSkipped] = useState(false);
+  // Quando o cliente já chegou aqui com uma categoria definida (veio da home,
+  // da busca ou do perfil de um prestador), ela já está decidida -- pular a
+  // etapa de seleção em vez de fazer escolher de novo é o motivo #1 de
+  // reclamação de fricção nesse fluxo. Um rascunho retomado da mesma
+  // categoria já nasce "pulado" também, senão o botão voltar reexibiria uma
+  // etapa que o cliente nunca viu nesta sessão.
+  const [categoryStepSkipped, setCategoryStepSkipped] = useState(
+    () => !!(draft && preselectedSlug),
+  );
   useEffect(() => {
     if (draft || categoryStepSkipped || step !== 0) return;
-    if (!providerId || !preselectedSlug || categories.length === 0) return;
+    if (!preselectedSlug || categories.length === 0) return;
     if (categories.some((c) => c.slug === preselectedSlug)) {
       setCategoryStepSkipped(true);
       setStep(1);
     }
-  }, [draft, categoryStepSkipped, step, providerId, preselectedSlug, categories]);
+  }, [draft, categoryStepSkipped, step, preselectedSlug, categories]);
 
   useEffect(() => {
     if (!defaults || usingOtherAddress || street) return;
@@ -332,7 +339,7 @@ function RequestFlow() {
   }
 
   useEffect(() => {
-    if (step === 3 && !defaults?.address && !street && !locating && !locateError) {
+    if (step === 2 && !defaults?.address && !street && !locating && !locateError) {
       locateMe();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -366,8 +373,7 @@ function RequestFlow() {
   const canNext =
     (step === 0 && categoryId) ||
     (step === 1 && desc.length > 5) ||
-    step === 2 ||
-    (step === 3 &&
+    (step === 2 &&
       cep.replace(/\D/g, "").length === 8 &&
       street.trim() &&
       houseNumber.trim() &&
@@ -377,15 +383,14 @@ function RequestFlow() {
       areaAvailable &&
       lat != null &&
       lng != null) ||
-    (step === 4 &&
+    (step === 3 &&
       urgency &&
       availabilityStartTime &&
       availabilityEndTime &&
       availabilityEndTime > availabilityStartTime &&
       (urgency === "hoje" ||
         (availabilityStart && availabilityEnd && availabilityEnd >= availabilityStart))) ||
-    (step === 5 && contactName.trim() && contactPhone.trim()) ||
-    step === 6;
+    (step === 4 && contactName.trim() && contactPhone.trim());
 
   async function handlePickPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -498,6 +503,8 @@ function RequestFlow() {
       nav({ to: "/home" });
     } else if (step === 1 && categoryStepSkipped && providerId) {
       nav({ to: "/providers/$providerId", params: { providerId } });
+    } else if (step === 1 && categoryStepSkipped && preselectedSlug) {
+      nav({ to: "/search", search: { category: preselectedSlug } });
     } else {
       setStep(step - 1);
     }
@@ -573,27 +580,19 @@ function RequestFlow() {
               Descreva o problema
             </h2>
             <p className="text-muted-foreground mb-6 text-sm">
-              Quanto mais detalhes, melhores as propostas.
+              Quanto mais detalhes, melhores as propostas. Fotos são opcionais, mas ajudam bastante.
             </p>
             <textarea
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
               placeholder="Ex.: Vazamento embaixo da pia da cozinha, água pingando desde ontem."
-              className="w-full h-56 p-4 rounded-2xl bg-card border border-border text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
+              className="w-full h-40 p-4 rounded-2xl bg-card border border-border text-base resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             <p className="text-xs text-muted-foreground mt-2 text-right">
               {desc.length} caracteres
             </p>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="animate-float-up">
-            <h2 className="text-2xl font-extrabold font-[Manrope] leading-tight mb-1">
-              Adicione fotos
-            </h2>
-            <p className="text-muted-foreground mb-6 text-sm">
-              Até 10 fotos ajudam o prestador a entender.
+            <p className="text-xs font-semibold text-muted-foreground mt-5 mb-2">
+              Fotos (opcional)
             </p>
             <input
               ref={cameraInputRef}
@@ -649,7 +648,7 @@ function RequestFlow() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 2 && (
           <div className="animate-float-up">
             <h2 className="text-2xl font-extrabold font-[Manrope] leading-tight mb-1">
               Onde é o serviço?
@@ -886,7 +885,7 @@ function RequestFlow() {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 3 && (
           <div className="animate-float-up">
             <h2 className="text-2xl font-extrabold font-[Manrope] leading-tight mb-1">
               Qual a urgência?
@@ -984,42 +983,7 @@ function RequestFlow() {
           </div>
         )}
 
-        {step === 5 && (
-          <div className="animate-float-up">
-            <h2 className="text-2xl font-extrabold font-[Manrope] leading-tight mb-1">
-              Contato no local
-            </h2>
-            <p className="text-muted-foreground mb-6 text-sm">
-              Informe quem o prestador deve chamar caso precise falar sobre o atendimento.
-            </p>
-            <div className="space-y-3 rounded-2xl bg-card border border-border p-4">
-              <input
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                placeholder="Nome do contato"
-                className="w-full h-12 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-              />
-              <input
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="Telefone / WhatsApp"
-                inputMode="tel"
-                className="w-full h-12 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-              />
-              <input
-                value={attendeeName}
-                onChange={(e) => setAttendeeName(e.target.value)}
-                placeholder="Quem receberá o prestador? (opcional)"
-                className="w-full h-12 px-3 rounded-xl bg-background border border-border text-sm outline-none"
-              />
-              <p className="text-[11px] text-muted-foreground">
-                Se outra pessoa estiver no local, informe o nome dela acima.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {step === 6 && (
+        {step === 4 && (
           <div className="animate-float-up">
             <h2 className="text-2xl font-extrabold font-[Manrope] leading-tight mb-1">
               Confirmar solicitação
@@ -1053,11 +1017,36 @@ function RequestFlow() {
                     : `${availabilityStart.split("-").reverse().join("/")} até ${availabilityEnd.split("-").reverse().join("/")} · ${availabilityStartTime}–${availabilityEndTime}`
                 }
               />
-              <Row
-                label="Contato"
-                value={`${contactName} · ${contactPhone}${attendeeName ? ` · Recebe: ${attendeeName}` : ""}`}
-              />
             </div>
+
+            <p className="text-xs font-semibold text-muted-foreground mt-5 mb-2">
+              Contato no local
+            </p>
+            <div className="space-y-3 rounded-2xl bg-card border border-border p-4">
+              <input
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                placeholder="Nome do contato"
+                className="w-full h-12 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+              />
+              <input
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="Telefone / WhatsApp"
+                inputMode="tel"
+                className="w-full h-12 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+              />
+              <input
+                value={attendeeName}
+                onChange={(e) => setAttendeeName(e.target.value)}
+                placeholder="Quem receberá o prestador? (opcional)"
+                className="w-full h-12 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Se outra pessoa estiver no local, informe o nome dela acima.
+              </p>
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-2">
               <TrustBadge kind="payment" />
               <TrustBadge kind="verified" />
