@@ -1,7 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Clock, Inbox, MapPin, PlayCircle } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Inbox,
+  MapPin,
+} from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { AppHeader } from "@/components/bicoja/AppHeader";
@@ -84,6 +92,29 @@ const WEEKDAY_LETTERS = ["D", "S", "T", "Q", "Q", "S", "S"];
 
 function sameDay(a: Date, b: Date) {
   return a.toDateString() === b.toDateString();
+}
+
+function sameMonth(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+}
+
+// Grade de calendário de verdade (passado, presente e futuro), não só os 7
+// dias da semana atual -- sempre começa num domingo e cobre o mês inteiro em
+// semanas completas, incluindo os dias de preenchimento do mês vizinho.
+function buildMonthGrid(monthAnchor: Date) {
+  const firstOfMonth = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
+  const start = new Date(firstOfMonth);
+  start.setDate(start.getDate() - start.getDay());
+  const totalCells = Math.ceil((firstOfMonth.getDay() + daysInMonth(monthAnchor)) / 7) * 7;
+  return Array.from({ length: totalCells }, (_, i) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + i);
+    return date;
+  });
+}
+
+function daysInMonth(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 }
 
 function serviceDate(order: ScheduleOrder) {
@@ -198,13 +229,10 @@ function Schedule() {
   const { session } = useSession();
   const { data: items = [], isLoading } = useProviderOrders(session?.user.id);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [viewedMonth, setViewedMonth] = useState(new Date());
   const [filter, setFilter] = useState<"todos" | "ativos" | "finalizados">("todos");
 
-  const week = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date(selectedDate);
-    date.setDate(selectedDate.getDate() - selectedDate.getDay() + i);
-    return date;
-  });
+  const monthGrid = useMemo(() => buildMonthGrid(viewedMonth), [viewedMonth]);
   const datedItems = useMemo(() => items.filter((item) => serviceDate(item)), [items]);
   const selectedItems = datedItems.filter((item) => sameDay(serviceDate(item)!, selectedDate));
   const unscheduledActive = items.filter(
@@ -221,6 +249,16 @@ function Schedule() {
   ).length;
   const activeCount = items.filter((item) => ACTIVE_STATUSES.includes(item.status)).length;
   const completedCount = items.filter((item) => item.status === "concluido").length;
+
+  function changeMonth(delta: number) {
+    setViewedMonth((current) => new Date(current.getFullYear(), current.getMonth() + delta, 1));
+  }
+
+  function goToToday() {
+    const today = new Date();
+    setViewedMonth(today);
+    setSelectedDate(today);
+  }
 
   return (
     <PhoneFrame>
@@ -255,27 +293,63 @@ function Schedule() {
         </section>
 
         <section className="px-5 mt-6">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground capitalize">
-            {selectedDate.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
-          </p>
-          <div className="mt-3 grid grid-cols-7 gap-1.5">
-            {week.map((date) => {
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => changeMonth(-1)}
+              aria-label="Mês anterior"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="flex items-center gap-2">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground capitalize">
+                {viewedMonth.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}
+              </p>
+              {!sameMonth(viewedMonth, new Date()) && (
+                <button
+                  onClick={goToToday}
+                  className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-bold text-primary"
+                >
+                  Hoje
+                </button>
+              )}
+            </div>
+            <button
+              onClick={() => changeMonth(1)}
+              aria-label="Próximo mês"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="mt-3 grid grid-cols-7 gap-1 text-center">
+            {WEEKDAY_LETTERS.map((letter, i) => (
+              <span key={i} className="text-[10px] font-semibold text-muted-foreground">
+                {letter}
+              </span>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-7 gap-1.5">
+            {monthGrid.map((date) => {
               const active = sameDay(date, selectedDate);
+              const isToday = sameDay(date, new Date());
+              const inMonth = sameMonth(date, viewedMonth);
               const hasItem = datedItems.some((item) => sameDay(serviceDate(item)!, date));
               return (
                 <button
                   key={date.toISOString()}
                   onClick={() => setSelectedDate(date)}
-                  className={`relative flex flex-col items-center rounded-2xl py-2 ${active ? "bg-primary text-primary-foreground shadow-card" : "border border-border bg-card"}`}
+                  className={`relative flex flex-col items-center rounded-xl py-1.5 ${
+                    active
+                      ? "bg-primary text-primary-foreground shadow-card"
+                      : isToday
+                        ? "border border-primary/50 bg-card"
+                        : "border border-transparent"
+                  } ${!inMonth ? "opacity-35" : ""}`}
                 >
-                  <span
-                    className={`text-[10px] font-semibold ${active ? "opacity-80" : "text-muted-foreground"}`}
-                  >
-                    {WEEKDAY_LETTERS[date.getDay()]}
-                  </span>
-                  <span className="text-base font-extrabold">{date.getDate()}</span>
+                  <span className="text-sm font-bold">{date.getDate()}</span>
                   {hasItem && !active && (
-                    <span className="absolute bottom-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                    <span className="absolute bottom-0.5 h-1.5 w-1.5 rounded-full bg-primary" />
                   )}
                 </button>
               );
