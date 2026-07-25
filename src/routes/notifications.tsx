@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Bell, BellRing, Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { useSession } from "@/lib/session-context";
 import { useNotifications, useMarkNotificationRead, type Notification } from "@/lib/notifications";
+import { isPushSupported, subscribeToPush } from "@/lib/push";
 
 export const Route = createFileRoute("/notifications")({
   component: NotificationsPage,
@@ -33,9 +35,25 @@ function NotificationsPage() {
     if ("Notification" in window) setPermission(Notification.permission);
   }, []);
 
+  // Se a permissão já foi concedida antes (outra sessão neste navegador, ou
+  // versão anterior que só pedia permissão sem completar a inscrição), tenta
+  // registrar a assinatura de push -- subscribeToPush reaproveita a
+  // assinatura existente do navegador, então é seguro repetir.
+  useEffect(() => {
+    if (!session?.user.id || !isPushSupported) return;
+    if (Notification.permission !== "granted") return;
+    void subscribeToPush(session.user.id);
+  }, [session?.user.id]);
+
   async function enableBrowserNotifications() {
     if (!("Notification" in window)) return;
-    setPermission(await Notification.requestPermission());
+    const result = await Notification.requestPermission();
+    setPermission(result);
+    if (result !== "granted" || !session?.user.id) return;
+    if (!isPushSupported) return;
+    const subscribed = await subscribeToPush(session.user.id);
+    if (subscribed) toast.success("Notificações ativadas neste dispositivo.");
+    else toast.error("Não foi possível ativar as notificações neste dispositivo.");
   }
 
   async function open(n: Notification) {
