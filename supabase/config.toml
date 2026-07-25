@@ -1,0 +1,4 @@
+[functions.send-push]
+# Só é chamada pelo trigger interno em public.notifications (via pg_net),
+# nunca por um cliente autenticado -- por isso sem verificação de JWT.
+verify_jwt = false

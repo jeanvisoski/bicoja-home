@@ -1,6 +1,13 @@
 import { supabase } from "./supabase";
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+// A chave pública VAPID não é sensível -- é a parte assimétrica que todo
+// navegador recebe ao assinar push, por design do protocolo. Serve de
+// fallback aqui pra não depender de configurar variável de build na
+// Cloudflare; dá pra sobrescrever via VITE_VAPID_PUBLIC_KEY se as chaves
+// forem rotacionadas.
+const VAPID_PUBLIC_KEY =
+  (import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined) ||
+  "BPpk4hx2NIQ2s9W-bkYfDhPyDJtNetxKHQqD1QHBnRMMCIoISoSmmk3BuobCvfJXi_SZ2B6CnTZFy90XABe_aHY";
 
 export const isPushSupported =
   typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window;
