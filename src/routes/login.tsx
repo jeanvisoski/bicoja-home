@@ -579,7 +579,7 @@ function Login() {
           </p>
         </div>
 
-        <form onSubmit={submit} className="space-y-3" autoComplete="off">
+        <form onSubmit={submit} className="space-y-3">
           {mode === "criar" && (
             <>
               <Field label="Nome completo" icon={User}>
@@ -607,7 +607,7 @@ function Login() {
             <input
               type="email"
               required
-              autoComplete="off"
+              autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="seu@email.com"
@@ -619,7 +619,7 @@ function Login() {
             <input
               type={showPassword ? "text" : "password"}
               required
-              autoComplete={mode === "criar" ? "new-password" : "off"}
+              autoComplete={mode === "criar" ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={mode === "criar" ? "Mínimo 8 caracteres" : "Senha"}

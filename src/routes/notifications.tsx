@@ -35,16 +35,6 @@ function NotificationsPage() {
     if ("Notification" in window) setPermission(Notification.permission);
   }, []);
 
-  // Se a permissão já foi concedida antes (outra sessão neste navegador, ou
-  // versão anterior que só pedia permissão sem completar a inscrição), tenta
-  // registrar a assinatura de push -- subscribeToPush reaproveita a
-  // assinatura existente do navegador, então é seguro repetir.
-  useEffect(() => {
-    if (!session?.user.id || !isPushSupported) return;
-    if (Notification.permission !== "granted") return;
-    void subscribeToPush(session.user.id);
-  }, [session?.user.id]);
-
   async function enableBrowserNotifications() {
     if (!("Notification" in window)) return;
     const result = await Notification.requestPermission();

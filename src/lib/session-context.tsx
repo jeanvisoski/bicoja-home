@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
+import { isPushSupported, subscribeToPush } from "./push";
 
 type SessionContextValue = {
   session: Session | null;
@@ -25,6 +26,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.subscription.unsubscribe();
   }, []);
+
+  // Reconfirma a inscrição de push sempre que uma sessão aparece (login novo
+  // ou sessão restaurada do storage) -- antes só rodava quando o usuário
+  // abria a tela de Notificações, então uma sessão restaurada sem essa
+  // visita ficava sem receber push mesmo com a permissão já concedida antes.
+  useEffect(() => {
+    if (!session?.user.id || !isPushSupported) return;
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    void subscribeToPush(session.user.id);
+  }, [session?.user.id]);
 
   useEffect(() => {
     if (!session?.user.id) return;
