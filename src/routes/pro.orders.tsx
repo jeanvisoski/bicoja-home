@@ -76,6 +76,7 @@ type OrderDetail = {
   duration_minutes: number | null;
   final_price: number;
   client_id: string;
+  cancellation_reason: string | null;
   service_requests: {
     description: string;
     contact_name: string | null;
@@ -94,7 +95,7 @@ function useOrderDetail(orderId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, status, price, platform_fee, total, pricing_type, quoted_price_min, quoted_price_max, duration_minutes, final_price, client_id, service_requests(description, contact_name, contact_phone, attendee_name, service_categories(label)), order_photos(kind, photo_url)",
+          "id, status, price, platform_fee, total, pricing_type, quoted_price_min, quoted_price_max, duration_minutes, final_price, client_id, cancellation_reason, service_requests(description, contact_name, contact_phone, attendee_name, service_categories(label)), order_photos(kind, photo_url)",
         )
         .eq("id", orderId)
         .returns<OrderDetail[]>()
@@ -585,6 +586,8 @@ function ProOrder() {
     const executing = status === "aceito" || status === "a_caminho" || status === "executando";
     const waitingPayment = status === "fotos_enviadas" || status === "aguardando_confirmacao";
     const done = status === "concluido";
+    const canceled = status === "cancelado";
+    const disputed = status === "em_disputa";
 
     return (
       <PhoneFrame>
@@ -757,6 +760,32 @@ function ProOrder() {
               </div>
             </div>
           )}
+
+          {canceled && (
+            <div className="p-5 space-y-4 animate-float-up">
+              <div className="rounded-2xl bg-secondary/60 border border-border p-4">
+                <p className="text-sm font-semibold">Este pedido foi cancelado</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {order?.cancellation_reason ||
+                    "O cliente cancelou antes da confirmação do pagamento."}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {disputed && (
+            <div className="p-5 space-y-4 animate-float-up">
+              <div className="rounded-2xl bg-destructive/10 border border-destructive/20 p-4">
+                <p className="text-sm font-semibold text-destructive">
+                  O cliente reportou um problema
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  A equipe BICOJÁ está mediando este pedido. Você será avisado assim que houver uma
+                  decisão.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-background/0 pt-8 space-y-2">
@@ -792,7 +821,7 @@ function ProOrder() {
                   : "Enviar para confirmação"}
             </button>
           )}
-          {(waitingPayment || done) && (
+          {(waitingPayment || done || canceled || disputed) && (
             <button
               onClick={() => nav({ to: "/pro" })}
               className="w-full h-14 rounded-2xl bg-primary text-primary-foreground font-semibold flex items-center justify-center gap-2 shadow-card"
