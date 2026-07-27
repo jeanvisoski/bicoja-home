@@ -25,6 +25,16 @@ const STATUS_ORDER = [
   "concluido",
 ] as const;
 
+// O prestador não tem chat de voz no app -- o "telefone" sempre foi pra
+// conversar via WhatsApp mesmo, então abre o link de chat direto em vez de
+// tentar discar (o botão nunca teve nenhuma ação, ficava morto).
+function whatsAppLink(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  return `https://wa.me/${digits.startsWith("55") ? digits : `55${digits}`}`;
+}
+
 const STEPS = [
   "Pedido recebido",
   "Prestador aceitou",
@@ -47,7 +57,7 @@ type OrderTracking = {
     addresses: { lat: number | null; lng: number | null } | null;
   } | null;
   provider_profiles: {
-    profiles: { full_name: string | null; avatar_url: string | null } | null;
+    profiles: { full_name: string | null; avatar_url: string | null; phone: string | null } | null;
     rating_avg: number;
     rating_count: number;
     lat: number | null;
@@ -67,7 +77,7 @@ function useOrder(orderId: string | undefined) {
       const { data, error } = await supabase
         .from("orders")
         .select(
-          "id, status, scheduled_date, scheduled_start_time, scheduled_end_time, service_requests(description, service_categories(label), addresses(lat, lng)), provider_profiles(profiles(full_name, avatar_url), rating_avg, rating_count, lat, lng), order_provider_locations(lat, lng, updated_at)",
+          "id, status, scheduled_date, scheduled_start_time, scheduled_end_time, service_requests(description, service_categories(label), addresses(lat, lng)), provider_profiles(profiles(full_name, avatar_url, phone), rating_avg, rating_count, lat, lng), order_provider_locations(lat, lng, updated_at)",
         )
         .eq("id", orderId)
         .returns<OrderTracking[]>()
@@ -96,6 +106,7 @@ function Tracking() {
 
   const provider = order?.provider_profiles;
   const providerName = provider?.profiles?.full_name ?? "Prestador";
+  const providerWhatsApp = whatsAppLink(provider?.profiles?.phone);
   const canReviewCompletion =
     order?.status === "fotos_enviadas" || order?.status === "aguardando_confirmacao";
   const canOpenOrderDetail =
@@ -176,9 +187,25 @@ function Tracking() {
               >
                 <MessageCircle className="h-5 w-5 text-primary" />
               </Link>
-              <button className="h-11 w-11 rounded-full bg-primary flex items-center justify-center">
-                <Phone className="h-5 w-5 text-primary-foreground" />
-              </button>
+              {providerWhatsApp ? (
+                <a
+                  href={providerWhatsApp}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="h-11 w-11 rounded-full bg-primary flex items-center justify-center"
+                  aria-label="Conversar no WhatsApp"
+                >
+                  <Phone className="h-5 w-5 text-primary-foreground" />
+                </a>
+              ) : (
+                <button
+                  disabled
+                  className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center opacity-50"
+                  aria-label="Telefone do prestador indisponível"
+                >
+                  <Phone className="h-5 w-5 text-muted-foreground" />
+                </button>
+              )}
             </div>
           </div>
         </div>
