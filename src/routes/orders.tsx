@@ -191,7 +191,7 @@ function Orders() {
           {list.map((o) => (
             <Link
               key={o.id}
-              to="/tracking"
+              to={tab === "historico" ? "/confirm" : "/tracking"}
               search={{ orderId: o.id }}
               className="flex items-center gap-3 p-4 rounded-2xl bg-card border border-border shadow-card"
             >

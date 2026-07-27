@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, AlertTriangle, Sparkles, X } from "lucide-react";
+import { Check, AlertTriangle, Sparkles, ShieldAlert, X } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { supabase } from "@/lib/supabase";
@@ -78,11 +78,15 @@ function Confirm() {
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
   const readyForConfirmation =
     order?.status === "fotos_enviadas" || order?.status === "aguardando_confirmacao";
+  const done = order?.status === "concluido";
+  const disputed = order?.status === "em_disputa";
+  const canceled = order?.status === "cancelado";
   const guaranteeActive =
-    order?.status === "concluido" &&
+    done &&
     order.guarantee_status === "em_garantia" &&
     !!order.guarantee_until &&
     new Date(order.guarantee_until) > new Date();
+  const guaranteeExpired = done && !guaranteeActive;
 
   async function confirmCompletion() {
     if (!orderId || !readyForConfirmation || depois.length === 0) {
@@ -137,18 +141,51 @@ function Confirm() {
 
       <div className="flex-1 overflow-y-auto px-5 pt-4 pb-32">
         <div
-          className={`rounded-2xl p-4 flex items-start gap-3 border ${readyForConfirmation ? "bg-trust-soft/50 border-trust/20" : "bg-secondary border-border"}`}
+          className={`rounded-2xl p-4 flex items-start gap-3 border ${
+            disputed
+              ? "bg-destructive/10 border-destructive/20"
+              : readyForConfirmation || guaranteeActive
+                ? "bg-trust-soft/50 border-trust/20"
+                : "bg-secondary border-border"
+          }`}
         >
-          <Sparkles className="h-5 w-5 text-trust mt-0.5" />
+          {disputed ? (
+            <ShieldAlert className="h-5 w-5 text-destructive mt-0.5" />
+          ) : (
+            <Sparkles className="h-5 w-5 text-trust mt-0.5" />
+          )}
           <div>
-            <p className="text-sm font-semibold">
-              {readyForConfirmation ? "Serviço finalizado!" : "Aguardando conclusão do prestador"}
+            <p className={`text-sm font-semibold ${disputed ? "text-destructive" : ""}`}>
+              {disputed
+                ? "Em análise pela nossa equipe"
+                : canceled
+                  ? "Pedido cancelado"
+                  : readyForConfirmation
+                    ? "Serviço finalizado!"
+                    : guaranteeActive
+                      ? "Serviço concluído — garantia ativa"
+                      : guaranteeExpired
+                        ? "Serviço concluído"
+                        : "Aguardando conclusão do prestador"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {readyForConfirmation
-                ? "Confira as fotos e confirme a conclusão para liberar o pagamento."
-                : "Assim que o prestador enviar as fotos finais, você poderá revisar e confirmar."}
+              {disputed
+                ? "Você reportou um problema neste pedido. Nossa equipe vai mediar e entrar em contato."
+                : canceled
+                  ? "Este pedido foi cancelado."
+                  : readyForConfirmation
+                    ? "Confira as fotos e confirme a conclusão para liberar o pagamento."
+                    : guaranteeActive
+                      ? `Teve algum problema? Você pode reportar até ${new Date(order!.guarantee_until!).toLocaleDateString("pt-BR")}.`
+                      : guaranteeExpired
+                        ? "O prazo de garantia deste pedido já encerrou."
+                        : "Assim que o prestador enviar as fotos finais, você poderá revisar e confirmar."}
             </p>
+            {guaranteeExpired && (
+              <Link to="/help" className="text-xs font-semibold text-primary mt-1 inline-block">
+                Falar com o suporte →
+              </Link>
+            )}
           </div>
         </div>
 
@@ -244,20 +281,23 @@ function Confirm() {
             </button>
           </div>
         )}
-        <button
-          onClick={confirmCompletion}
-          disabled={!orderId || confirming || !readyForConfirmation || depois.length === 0}
-          className="w-full h-14 rounded-2xl bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 shadow-card active:scale-[0.99] transition-transform disabled:opacity-50"
-        >
-          <Check className="h-5 w-5" /> {confirming ? "Confirmando..." : "Confirmar conclusão"}
-        </button>
-        <button
-          onClick={() => setReporting((v) => !v)}
-          disabled={!readyForConfirmation && !guaranteeActive}
-          className="w-full h-12 rounded-2xl text-destructive font-semibold flex items-center justify-center gap-2 disabled:opacity-40"
-        >
-          <AlertTriangle className="h-4 w-4" /> Reportar problema
-        </button>
+        {readyForConfirmation && (
+          <button
+            onClick={confirmCompletion}
+            disabled={!orderId || confirming || depois.length === 0}
+            className="w-full h-14 rounded-2xl bg-primary text-primary-foreground text-base font-semibold flex items-center justify-center gap-2 shadow-card active:scale-[0.99] transition-transform disabled:opacity-50"
+          >
+            <Check className="h-5 w-5" /> {confirming ? "Confirmando..." : "Confirmar conclusão"}
+          </button>
+        )}
+        {(readyForConfirmation || guaranteeActive) && (
+          <button
+            onClick={() => setReporting((v) => !v)}
+            className="w-full h-12 rounded-2xl text-destructive font-semibold flex items-center justify-center gap-2"
+          >
+            <AlertTriangle className="h-4 w-4" /> Reportar problema
+          </button>
+        )}
       </div>
     </PhoneFrame>
   );

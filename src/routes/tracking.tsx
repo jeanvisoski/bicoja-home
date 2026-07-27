@@ -98,6 +98,10 @@ function Tracking() {
   const providerName = provider?.profiles?.full_name ?? "Prestador";
   const canReviewCompletion =
     order?.status === "fotos_enviadas" || order?.status === "aguardando_confirmacao";
+  const canOpenOrderDetail =
+    order?.status === "concluido" ||
+    order?.status === "em_disputa" ||
+    order?.status === "cancelado";
   const address = order?.service_requests?.addresses;
   const liveLocation = order?.status === "a_caminho" ? order.order_provider_locations : null;
   const mapLat = address?.lat ?? liveLocation?.lat ?? provider?.lat ?? null;
@@ -233,13 +237,17 @@ function Tracking() {
             })}
           </div>
 
-          {canReviewCompletion ? (
+          {canReviewCompletion || canOpenOrderDetail ? (
             <Link
               to="/confirm"
               search={{ orderId }}
               className="block mt-2 h-14 rounded-2xl border border-primary text-primary font-semibold text-center leading-[3.5rem]"
             >
-              Revisar conclusão
+              {canReviewCompletion
+                ? "Revisar conclusão"
+                : order?.status === "em_disputa"
+                  ? "Ver detalhes da disputa"
+                  : "Ver detalhes do pedido"}
             </Link>
           ) : (
             <p className="mt-2 text-center text-xs text-muted-foreground">
