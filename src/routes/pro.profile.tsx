@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,8 @@ import {
   FileText,
   Check,
   Images,
+  Wallet,
+  Clock3,
 } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
@@ -143,6 +145,37 @@ function useVerificationDocuments(providerId: string | undefined) {
   });
 }
 
+type PayoutDestination = {
+  pix_key: string;
+  pix_key_type: string;
+  holder_name: string;
+  status: string;
+};
+
+const PIX_KEY_TYPE_LABEL: Record<string, string> = {
+  cpf: "CPF",
+  cnpj: "CNPJ",
+  email: "E-mail",
+  telefone: "Telefone",
+  aleatoria: "Chave aleatória",
+};
+
+function usePayoutDestination(providerId: string | undefined) {
+  return useQuery({
+    queryKey: ["payout-destination", providerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("provider_payout_destinations")
+        .select("pix_key, pix_key_type, holder_name, status")
+        .eq("provider_id", providerId)
+        .maybeSingle<PayoutDestination>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!providerId,
+  });
+}
+
 type CompletedJobPhoto = {
   id: string;
   photo_url: string;
@@ -178,6 +211,7 @@ function ProProfile() {
   const { data: reviews = [] } = useReviews(userId);
   const { data: services = [] } = useProviderServices(userId);
   const { data: verificationDocuments = [] } = useVerificationDocuments(userId);
+  const { data: payoutDestination } = usePayoutDestination(userId);
   const { data: completedPhotos = [] } = useCompletedJobPhotos(userId);
   const { data: categories = [] } = useCategories();
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -578,6 +612,46 @@ function ProProfile() {
                 {verificationDocuments[0].status.replace("_", " ")}
               </p>
             )}
+          </div>
+        </section>
+
+        <section className="px-5 mt-6">
+          <div className="rounded-2xl bg-card border border-border p-4">
+            <div className="flex items-start gap-3">
+              <Wallet className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold">Recebimento (Pix)</p>
+                {payoutDestination ? (
+                  <>
+                    <p className="text-sm mt-1">
+                      {PIX_KEY_TYPE_LABEL[payoutDestination.pix_key_type] ??
+                        payoutDestination.pix_key_type}
+                      : {payoutDestination.pix_key}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{payoutDestination.holder_name}</p>
+                    <p
+                      className={`text-xs mt-1 flex items-center gap-1 ${payoutDestination.status === "verificado" ? "text-trust" : "text-amber-600"}`}
+                    >
+                      {payoutDestination.status === "verificado" ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <Clock3 className="h-3 w-3" />
+                      )}
+                      {payoutDestination.status === "verificado"
+                        ? "Verificada"
+                        : "Aguardando validação"}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nenhuma chave Pix cadastrada ainda.
+                  </p>
+                )}
+              </div>
+              <Link to="/pro/wallet" className="shrink-0 text-xs font-semibold text-primary">
+                {payoutDestination ? "Gerenciar" : "Cadastrar"}
+              </Link>
+            </div>
           </div>
         </section>
 

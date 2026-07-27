@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowDownLeft, ArrowUpRight, Clock3, WalletCards } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Clock3, WalletCards, CheckCircle2 } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { AppHeader } from "@/components/bicoja/AppHeader";
@@ -69,6 +69,14 @@ function useWalletTransactions(providerId: string | undefined) {
   });
 }
 
+const PIX_KEY_TYPE_LABEL: Record<string, string> = {
+  cpf: "CPF",
+  cnpj: "CNPJ",
+  email: "E-mail",
+  telefone: "Telefone",
+  aleatoria: "Chave aleatória",
+};
+
 function ProWallet() {
   const { session } = useSession();
   const { data: transactions = [], isLoading } = useWalletTransactions(session?.user.id);
@@ -78,6 +86,10 @@ function ProWallet() {
   const [holderName, setHolderName] = useState("");
   const [savingDestination, setSavingDestination] = useState(false);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  // Enquanto não existe uma chave salva, o formulário fica aberto direto;
+  // depois de salvar, mostra um card confirmado em vez de um formulário
+  // vazio de novo -- senão o prestador nunca via a própria chave cadastrada.
+  const [editingDestination, setEditingDestination] = useState(false);
   const available = transactions
     .filter((transaction) => transaction.status === "disponivel")
     .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
@@ -108,6 +120,7 @@ function ProWallet() {
     toast.success("Chave Pix enviada para validacao.");
     setPixKey("");
     setHolderName("");
+    setEditingDestination(false);
     refetchDestination();
   }
 
@@ -144,58 +157,99 @@ function ProWallet() {
         <section className="px-5 mt-6">
           <div className="rounded-2xl border border-border bg-card p-4 mb-5">
             <h2 className="font-bold text-sm">Receber por Pix</h2>
-            {destination?.status === "verificado" ? (
-              <p className="text-xs text-trust mt-1">
-                Chave Pix verificada. Saldo disponivel pode ser solicitado.
-              </p>
+            {destination && !editingDestination ? (
+              <div className="mt-2">
+                <div className="flex items-start gap-2">
+                  {destination.status === "verificado" ? (
+                    <CheckCircle2 className="h-4 w-4 text-trust mt-0.5 shrink-0" />
+                  ) : (
+                    <Clock3 className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">
+                      {PIX_KEY_TYPE_LABEL[destination.pix_key_type] ?? destination.pix_key_type}:{" "}
+                      {destination.pix_key}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{destination.holder_name}</p>
+                    <p
+                      className={`text-xs mt-0.5 ${destination.status === "verificado" ? "text-trust" : "text-amber-600"}`}
+                    >
+                      {destination.status === "verificado"
+                        ? "Verificada — saldo disponível pode ser solicitado."
+                        : "Aguardando validação da equipe."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setKeyType(destination.pix_key_type);
+                      setEditingDestination(true);
+                    }}
+                    className="shrink-0 text-xs font-semibold text-primary"
+                  >
+                    Alterar
+                  </button>
+                </div>
+                <button
+                  onClick={requestPayout}
+                  disabled={
+                    requestingPayout || available <= 0 || destination.status !== "verificado"
+                  }
+                  className="mt-3 w-full h-10 rounded-xl bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
+                >
+                  {requestingPayout ? "Solicitando..." : `Sacar R$ ${available.toFixed(2)}`}
+                </button>
+              </div>
             ) : (
-              <p className="text-xs text-muted-foreground mt-1">
-                Cadastre uma chave Pix. A equipe precisa validar antes do primeiro saque.
-              </p>
+              <>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {destination
+                    ? "Informe a nova chave e o titular."
+                    : "Cadastre uma chave Pix. A equipe precisa validar antes do primeiro saque."}
+                </p>
+                <div className="mt-3 space-y-2">
+                  <select
+                    value={keyType}
+                    onChange={(e) => setKeyType(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                  >
+                    <option value="cpf">CPF</option>
+                    <option value="cnpj">CNPJ</option>
+                    <option value="email">E-mail</option>
+                    <option value="telefone">Telefone</option>
+                    <option value="aleatoria">Chave aleatoria</option>
+                  </select>
+                  <input
+                    value={pixKey}
+                    onChange={(e) => setPixKey(e.target.value)}
+                    placeholder="Chave Pix"
+                    className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                  />
+                  <input
+                    value={holderName}
+                    onChange={(e) => setHolderName(e.target.value)}
+                    placeholder="Nome do titular"
+                    className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 mt-3">
+                  <button
+                    onClick={saveDestination}
+                    disabled={savingDestination}
+                    className="h-10 rounded-xl border border-primary text-primary text-xs font-semibold disabled:opacity-50"
+                  >
+                    {savingDestination ? "Salvando..." : "Salvar chave"}
+                  </button>
+                  {destination && (
+                    <button
+                      onClick={() => setEditingDestination(false)}
+                      className="h-10 rounded-xl border border-border text-xs font-semibold"
+                    >
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+              </>
             )}
-            <div className="mt-3 space-y-2">
-              <select
-                value={keyType}
-                onChange={(e) => setKeyType(e.target.value)}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
-              >
-                <option value="cpf">CPF</option>
-                <option value="cnpj">CNPJ</option>
-                <option value="email">E-mail</option>
-                <option value="telefone">Telefone</option>
-                <option value="aleatoria">Chave aleatoria</option>
-              </select>
-              <input
-                value={pixKey}
-                onChange={(e) => setPixKey(e.target.value)}
-                placeholder={destination ? "Nova chave Pix (opcional)" : "Chave Pix"}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
-              />
-              <input
-                value={holderName}
-                onChange={(e) => setHolderName(e.target.value)}
-                placeholder={destination ? "Novo titular (opcional)" : "Nome do titular"}
-                className="w-full h-10 rounded-xl border border-border bg-background px-3 text-sm"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2 mt-3">
-              <button
-                onClick={saveDestination}
-                disabled={savingDestination}
-                className="h-10 rounded-xl border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-              >
-                {savingDestination ? "Salvando..." : "Salvar chave"}
-              </button>
-              <button
-                onClick={requestPayout}
-                disabled={
-                  requestingPayout || available <= 0 || destination?.status !== "verificado"
-                }
-                className="h-10 rounded-xl bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50"
-              >
-                {requestingPayout ? "Solicitando..." : `Sacar R$ ${available.toFixed(2)}`}
-              </button>
-            </div>
           </div>
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-base font-bold">Extrato</h1>
