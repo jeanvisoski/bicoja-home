@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Mail,
@@ -28,6 +28,7 @@ import { categoryIcon, useCategories } from "@/lib/categories";
 import { CLIENT_TERMS_VERSION, PROVIDER_TERMS_VERSION } from "@/lib/terms-versions";
 import { isInsideActiveServiceArea, useLaunchRegionSettings } from "@/lib/launch-regions";
 import { getViewMode, setViewMode } from "@/lib/view-mode";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -98,6 +99,20 @@ function Login() {
   const [regionCep, setRegionCep] = useState("");
   const [checkingRegion, setCheckingRegion] = useState(false);
   const [regionCityLabel, setRegionCityLabel] = useState("");
+  const { session, loading: loadingSession } = useSession();
+  // Só o redirecionamento automático de "já tem sessão" usa essa ref -- o
+  // próprio submit() já navega pro lugar certo (/pro ou /home) depois de
+  // entrar/criar conta, então esse efeito não deve competir com aquele.
+  const submittedRef = useRef(false);
+
+  // Quem chega aqui já com sessão válida (ex.: veio de "Pular"/"Começar" na
+  // tela de boas-vindas, ou abriu /login direto por engano) não deveria
+  // precisar digitar a senha de novo -- manda direto pra home.
+  useEffect(() => {
+    if (!loadingSession && session && !submittedRef.current) {
+      nav({ to: "/home", replace: true });
+    }
+  }, [loadingSession, session, nav]);
 
   const strength = passwordStrength(password);
 
@@ -201,6 +216,7 @@ function Login() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    submittedRef.current = true;
     if (!email.includes("@")) {
       toast.error("Digite um email válido.");
       return;

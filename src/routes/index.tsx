@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BrandLogo } from "@/components/bicoja/BrandLogo";
+import { useSession } from "@/lib/session-context";
 
 export const Route = createFileRoute("/")({
   component: Onboarding,
@@ -31,6 +32,25 @@ function Onboarding() {
   const [i, setI] = useState(0);
   const S = slides[i];
   const last = i === slides.length - 1;
+  const { session, loading } = useSession();
+  const nav = useNavigate();
+
+  // "/" é o start_url do PWA -- todo abrir do app instalado cai aqui. Sem
+  // essa checagem, quem já tinha sessão salva via essas telas de boas-vindas
+  // de novo em vez de ir direto pra home, dando a impressão de que o app
+  // "esqueceu" o login.
+  useEffect(() => {
+    if (!loading && session) nav({ to: "/home", replace: true });
+  }, [loading, session, nav]);
+
+  if (loading || session) {
+    return (
+      <PhoneFrame>
+        <div className="flex-1" />
+      </PhoneFrame>
+    );
+  }
+
   return (
     <PhoneFrame>
       <div className="flex-1 flex flex-col px-6 pt-6 pb-8">
