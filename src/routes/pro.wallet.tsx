@@ -1,8 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowDownLeft, ArrowUpRight, Clock3, WalletCards, CheckCircle2 } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Clock3,
+  WalletCards,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { AppHeader } from "@/components/bicoja/AppHeader";
@@ -69,6 +76,41 @@ function useWalletTransactions(providerId: string | undefined) {
   });
 }
 
+type PayoutRequest = {
+  id: string;
+  amount: number;
+  status: "solicitado" | "aprovado" | "pago" | "rejeitado" | "falhou";
+  admin_note: string | null;
+  payment_reference: string | null;
+  requested_at: string;
+  paid_at: string | null;
+};
+
+function usePayoutRequests(providerId: string | undefined) {
+  return useQuery({
+    queryKey: ["payout-requests", providerId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("payout_requests")
+        .select("id, amount, status, admin_note, payment_reference, requested_at, paid_at")
+        .eq("provider_id", providerId)
+        .order("requested_at", { ascending: false })
+        .returns<PayoutRequest[]>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!providerId,
+  });
+}
+
+const PAYOUT_STATUS_LABEL: Record<PayoutRequest["status"], string> = {
+  solicitado: "Aguardando aprovação",
+  aprovado: "Aprovado — aguardando transferência",
+  pago: "Pago",
+  rejeitado: "Rejeitado",
+  falhou: "Falhou",
+};
+
 const PIX_KEY_TYPE_LABEL: Record<string, string> = {
   cpf: "CPF",
   cnpj: "CNPJ",
@@ -79,8 +121,10 @@ const PIX_KEY_TYPE_LABEL: Record<string, string> = {
 
 function ProWallet() {
   const { session } = useSession();
+  const queryClient = useQueryClient();
   const { data: transactions = [], isLoading } = useWalletTransactions(session?.user.id);
   const { data: destination, refetch: refetchDestination } = usePayoutDestination(session?.user.id);
+  const { data: payoutRequests = [] } = usePayoutRequests(session?.user.id);
   const [pixKey, setPixKey] = useState("");
   const [keyType, setKeyType] = useState("cpf");
   const [holderName, setHolderName] = useState("");
@@ -130,6 +174,8 @@ function ProWallet() {
     setRequestingPayout(false);
     if (error) return toast.error(error.message);
     toast.success("Saque solicitado. A equipe fara a transferencia apos validar.");
+    queryClient.invalidateQueries({ queryKey: ["payout-requests", session?.user.id] });
+    queryClient.invalidateQueries({ queryKey: ["wallet-transactions", session?.user.id] });
   }
 
   return (
@@ -251,6 +297,57 @@ function ProWallet() {
               </>
             )}
           </div>
+
+          {payoutRequests.length > 0 && (
+            <div className="mb-5">
+              <h2 className="text-base font-bold mb-3">Histórico de saques</h2>
+              <div className="space-y-2">
+                {payoutRequests.map((request) => {
+                  const isPaid = request.status === "pago";
+                  const isRejected = request.status === "rejeitado" || request.status === "falhou";
+                  return (
+                    <div
+                      key={request.id}
+                      className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"
+                    >
+                      <div
+                        className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${isPaid ? "bg-emerald-100 text-emerald-700" : isRejected ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"}`}
+                      >
+                        {isPaid ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : isRejected ? (
+                          <XCircle className="h-5 w-5" />
+                        ) : (
+                          <Clock3 className="h-5 w-5" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold">
+                          {PAYOUT_STATUS_LABEL[request.status]}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Solicitado em {new Date(request.requested_at).toLocaleDateString("pt-BR")}
+                          {isPaid && request.paid_at
+                            ? ` · Pago em ${new Date(request.paid_at).toLocaleDateString("pt-BR")}`
+                            : ""}
+                        </p>
+                        {isPaid && request.payment_reference && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Comprovante: {request.payment_reference}
+                          </p>
+                        )}
+                        {isRejected && request.admin_note && (
+                          <p className="text-[11px] text-rose-700 mt-0.5">{request.admin_note}</p>
+                        )}
+                      </div>
+                      <p className="text-sm font-bold">R$ {Number(request.amount).toFixed(2)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-base font-bold">Extrato</h1>
             <span className="text-xs text-muted-foreground">Recebimentos e saques</span>
