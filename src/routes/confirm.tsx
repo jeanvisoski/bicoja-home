@@ -201,6 +201,15 @@ function Confirm() {
                 : "Valor fechado aceito. "}
               Ao confirmar a conclusão, você aprova este valor e libera o repasse.
             </p>
+            {order.pricing_type === "range" &&
+              Number(order.final_price) < Number(order.quoted_price_max) && (
+                <p className="text-xs text-trust font-medium mt-2">
+                  Você pagou R$ {Number(order.quoted_price_max).toFixed(2)} no checkout (teto da
+                  faixa). A diferença de R${" "}
+                  {(Number(order.quoted_price_max) - Number(order.final_price)).toFixed(2)} será
+                  devolvida automaticamente assim que você confirmar.
+                </p>
+              )}
           </div>
         )}
 

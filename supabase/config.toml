@@ -2,3 +2,9 @@
 # Só é chamada pelo trigger interno em public.notifications (via pg_net),
 # nunca por um cliente autenticado -- por isso sem verificação de JWT.
 verify_jwt = false
+
+[functions.process-order-refund]
+# Só é chamada pelo trigger interno em public.orders (via pg_net) ao
+# confirmar conclusão com reembolso pendente -- nunca por um cliente
+# autenticado.
+verify_jwt = false

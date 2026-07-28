@@ -10,6 +10,7 @@ import {
   ArrowDown,
   CheckCircle2,
   Camera,
+  Info,
 } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
@@ -47,7 +48,9 @@ function useOrder(orderId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("orders")
-        .select("id, proposal_id, request_id, price, platform_fee, total, status, payment_status")
+        .select(
+          "id, proposal_id, request_id, price, platform_fee, total, status, payment_status, pricing_type, quoted_price_min, quoted_price_max",
+        )
         .eq("id", orderId)
         .single();
       if (error) throw error;
@@ -174,6 +177,18 @@ function Payment() {
           />
           <Row label="Total" value={`R$ ${order?.total?.toFixed(2) ?? "—"}`} bold />
         </div>
+
+        {order?.pricing_type === "range" && (
+          <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 flex gap-3">
+            <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-900">
+              O prestador enviou uma faixa de preço (R$ {order?.quoted_price_min?.toFixed(2)} a R${" "}
+              {order?.quoted_price_max?.toFixed(2)}), porque o valor final só se confirma na
+              execução. Por isso você paga agora o topo da faixa; se o serviço custar menos, a
+              diferença é devolvida automaticamente assim que você confirmar a conclusão do serviço.
+            </p>
+          </div>
+        )}
 
         <div className="mt-5">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
