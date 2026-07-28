@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Lock, Shield } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 
@@ -128,6 +129,7 @@ function SecurityPage() {
           suporte.
         </p>
       </div>
+      <BottomNav variant="client" />
     </PhoneFrame>
   );
 }

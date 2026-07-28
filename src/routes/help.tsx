@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { BottomNav } from "@/components/bicoja/BottomNav";
 import { useSession } from "@/lib/session-context";
 import { supabase } from "@/lib/supabase";
 
@@ -84,6 +85,7 @@ function HelpPage() {
           </button>
         </section>
       </div>
+      <BottomNav variant="client" />
     </PhoneFrame>
   );
 }

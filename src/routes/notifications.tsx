@@ -1,12 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Bell, BellRing, Inbox } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { BottomNav } from "@/components/bicoja/BottomNav";
 import { useSession } from "@/lib/session-context";
 import { useNotifications, useMarkNotificationRead, type Notification } from "@/lib/notifications";
 import { isPushSupported, subscribeToPush } from "@/lib/push";
+import { getViewMode } from "@/lib/view-mode";
 
 export const Route = createFileRoute("/notifications")({
   component: NotificationsPage,
@@ -25,6 +27,7 @@ function timeAgo(iso: string) {
 
 function NotificationsPage() {
   const { session } = useSession();
+  const navigate = useNavigate();
   const { data: notifications = [] } = useNotifications(session?.user.id);
   const markRead = useMarkNotificationRead();
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">(
@@ -48,7 +51,11 @@ function NotificationsPage() {
 
   async function open(n: Notification) {
     if (!n.read) await markRead(n.id, session?.user.id);
-    if (n.link) window.location.assign(n.link);
+    // Navegação client-side (não window.location.assign): um reload de
+    // página cheio aqui fazia o botão "voltar" do navegador reabrir a tela
+    // anterior a partir do cache do navegador, às vezes com um build antigo
+    // do app (layout azul de uma versão anterior).
+    if (n.link) navigate({ href: n.link });
   }
 
   return (
@@ -119,6 +126,7 @@ function NotificationsPage() {
           </button>
         ))}
       </div>
+      <BottomNav variant={getViewMode() === "prestador" ? "pro" : "client"} />
     </PhoneFrame>
   );
 }

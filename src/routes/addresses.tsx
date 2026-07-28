@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { MapPin, Trash2, Inbox, Star, Home, Briefcase, MapPinned } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
 
@@ -166,6 +167,7 @@ function AddressesPage() {
           </div>
         ))}
       </div>
+      <BottomNav variant="client" />
     </PhoneFrame>
   );
 }

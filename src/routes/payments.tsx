@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CreditCard, Wallet } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
+import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/payments")({
@@ -66,6 +67,7 @@ function PaymentsPage() {
           </div>
         </div>
       </div>
+      <BottomNav variant="client" />
     </PhoneFrame>
   );
 }
