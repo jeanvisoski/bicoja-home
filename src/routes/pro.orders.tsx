@@ -138,6 +138,31 @@ function useExistingProposal(requestId: string | undefined, providerId: string |
   });
 }
 
+type RequestQuestion = {
+  id: string;
+  provider_id: string;
+  question: string;
+  answer: string | null;
+  created_at: string;
+};
+
+function useRequestQuestions(requestId: string | undefined) {
+  return useQuery({
+    queryKey: ["request-questions", requestId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("request_questions")
+        .select("id, provider_id, question, answer, created_at")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: true })
+        .returns<RequestQuestion[]>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!requestId,
+  });
+}
+
 type MyProposal = {
   id: string;
   request_id: string;
@@ -186,6 +211,27 @@ function ProOrder() {
   const { data: order } = useOrderDetail(orderId);
   const { data: existingProposal } = useExistingProposal(requestId, session?.user.id);
   const { data: myProposals = [], isLoading: loadingProposals } = useMyProposals(session?.user.id);
+  const { data: questions = [] } = useRequestQuestions(requestId);
+
+  const [newQuestion, setNewQuestion] = useState("");
+  const [askingQuestion, setAskingQuestion] = useState(false);
+
+  async function askQuestion() {
+    if (!session || !requestId || !newQuestion.trim()) return;
+    setAskingQuestion(true);
+    const { error } = await supabase.from("request_questions").insert({
+      request_id: requestId,
+      provider_id: session.user.id,
+      question: newQuestion.trim(),
+    });
+    setAskingQuestion(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setNewQuestion("");
+    queryClient.invalidateQueries({ queryKey: ["request-questions", requestId] });
+  }
 
   const [price, setPrice] = useState("");
   const [eta, setEta] = useState("");
@@ -449,6 +495,53 @@ function ProOrder() {
                   ))}
                 </div>
               )}
+            </div>
+
+            <div className="rounded-2xl bg-card border border-border p-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1">
+                Perguntas e respostas
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Falta alguma informação pra fechar o orçamento? Pergunte -- a resposta do cliente
+                fica visível para qualquer prestador que veja este pedido.
+              </p>
+              {questions.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {questions.map((q) => (
+                    <div key={q.id} className="rounded-xl bg-secondary/60 p-3">
+                      <p className="text-sm font-semibold">
+                        {q.provider_id === session?.user.id ? "Você perguntou: " : "Pergunta: "}
+                        <span className="font-normal">{q.question}</span>
+                      </p>
+                      {q.answer ? (
+                        <p className="text-sm text-trust mt-1">
+                          <span className="font-semibold">Cliente respondeu: </span>
+                          {q.answer}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Aguardando resposta do cliente.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  placeholder="Ex.: É vazamento contínuo ou só ao usar a torneira?"
+                  className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                />
+                <button
+                  onClick={askQuestion}
+                  disabled={askingQuestion || !newQuestion.trim()}
+                  className="h-11 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50 shrink-0"
+                >
+                  {askingQuestion ? "..." : "Perguntar"}
+                </button>
+              </div>
             </div>
 
             <div className="rounded-2xl bg-card border border-border p-4 flex items-center gap-3">

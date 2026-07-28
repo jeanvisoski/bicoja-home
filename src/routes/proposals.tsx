@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Star, BadgeCheck, Clock, Inbox } from "lucide-react";
+import { Star, BadgeCheck, Clock, Inbox, HelpCircle } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { supabase } from "@/lib/supabase";
@@ -36,6 +37,25 @@ type ProposalRow = {
   } | null;
 };
 
+type RequestQuestion = { id: string; question: string; answer: string | null };
+
+function useRequestQuestions(requestId: string | undefined) {
+  return useQuery({
+    queryKey: ["request-questions", requestId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("request_questions")
+        .select("id, question, answer")
+        .eq("request_id", requestId)
+        .order("created_at", { ascending: true })
+        .returns<RequestQuestion[]>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!requestId,
+  });
+}
+
 function useProposals(requestId: string | undefined) {
   return useQuery({
     queryKey: ["proposals", requestId],
@@ -61,6 +81,26 @@ function Proposals() {
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const { data: proposals = [], isLoading } = useProposals(requestId);
+  const { data: questions = [] } = useRequestQuestions(requestId);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [answering, setAnswering] = useState<string | null>(null);
+
+  async function answerQuestion(questionId: string) {
+    const answer = drafts[questionId]?.trim();
+    if (!answer) return;
+    setAnswering(questionId);
+    const { error } = await supabase
+      .from("request_questions")
+      .update({ answer, answered_at: new Date().toISOString() })
+      .eq("id", questionId);
+    setAnswering(null);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setDrafts((d) => ({ ...d, [questionId]: "" }));
+    queryClient.invalidateQueries({ queryKey: ["request-questions", requestId] });
+  }
 
   async function hire(proposalId: string) {
     if (!session) {
@@ -114,6 +154,46 @@ function Proposals() {
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {!requestId && (
           <EmptyState message="Nenhuma solicitação selecionada. Volte e crie um pedido primeiro." />
+        )}
+        {questions.length > 0 && (
+          <div className="rounded-2xl bg-card border border-border shadow-card p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <HelpCircle className="h-4 w-4 text-primary" />
+              <p className="font-semibold text-sm">Perguntas dos prestadores</p>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Sua resposta ajuda todos os prestadores a fazer um orçamento mais preciso.
+            </p>
+            <div className="space-y-3">
+              {questions.map((q) => (
+                <div key={q.id} className="rounded-xl bg-secondary/60 p-3">
+                  <p className="text-sm font-semibold">{q.question}</p>
+                  {q.answer ? (
+                    <p className="text-sm text-trust mt-1">
+                      <span className="font-semibold">Você respondeu: </span>
+                      {q.answer}
+                    </p>
+                  ) : (
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        value={drafts[q.id] ?? ""}
+                        onChange={(e) => setDrafts((d) => ({ ...d, [q.id]: e.target.value }))}
+                        placeholder="Sua resposta"
+                        className="flex-1 h-10 px-3 rounded-lg bg-background border border-border text-sm outline-none"
+                      />
+                      <button
+                        onClick={() => answerQuestion(q.id)}
+                        disabled={answering === q.id || !drafts[q.id]?.trim()}
+                        className="h-10 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-semibold disabled:opacity-50 shrink-0"
+                      >
+                        {answering === q.id ? "..." : "Responder"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         )}
         {requestId && !isLoading && proposals.length === 0 && (
           <EmptyState message="Ainda não chegaram propostas. Prestadores verificados vão ver sua solicitação e enviar orçamentos em breve." />
