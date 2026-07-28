@@ -414,8 +414,7 @@ function Messages() {
           )}
           {!chatsError && chats.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-16">
-              Nenhuma conversa ainda. Elas aparecem aqui quando você recebe uma proposta, contrata
-              ou é contratado.
+              Nenhuma conversa ainda. Elas aparecem aqui quando você contrata ou é contratado.
             </p>
           )}
           {!chatsError && chats.length > 0 && filteredChats.length === 0 && (
