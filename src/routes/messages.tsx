@@ -1,12 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { BadgeCheck, Search, Send, Paperclip, ChevronLeft, AlertTriangle } from "lucide-react";
+import {
+  BadgeCheck,
+  Search,
+  Send,
+  Paperclip,
+  ChevronLeft,
+  AlertTriangle,
+  Check,
+  CheckCheck,
+  X,
+} from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/session-context";
+import { uploadPhoto } from "@/lib/storage";
 import { ProfileAvatar } from "@/components/bicoja/ProfileAvatar";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { BrandLogo } from "@/components/bicoja/BrandLogo";
@@ -107,7 +118,7 @@ function useMyChats(userId: string | undefined) {
       );
       const { data: chatMessages, error } = await supabase
         .from("messages")
-        .select("conversation_id, sender_id, body, created_at, read_at")
+        .select("conversation_id, sender_id, body, attachment_url, created_at, read_at")
         .in(
           "conversation_id",
           chats.map((chat) => chat.conversationId),
@@ -119,26 +130,30 @@ function useMyChats(userId: string | undefined) {
           const inChat = (chatMessages ?? []).filter(
             (message) => message.conversation_id === chat.conversationId,
           );
+          const last = inChat[0];
           return {
             ...chat,
             otherLastSeenAt: lastSeenByProfile.get(chat.otherProfileId) ?? null,
             unreadCount: inChat.filter(
               (message) => message.sender_id !== userId && !message.read_at,
             ).length,
-            lastMessage: inChat[0]?.body ?? null,
+            lastMessage: last ? (last.body ?? (last.attachment_url ? "📷 Foto" : null)) : null,
           };
         })
         .sort((a, b) => Number(b.unreadCount > 0) - Number(a.unreadCount > 0));
     },
     enabled: !!userId,
-    refetchInterval: 4_000,
+    // Realtime cobre o caso comum; isso é só uma rede de segurança se a
+    // conexão realtime cair.
+    refetchInterval: 20_000,
   });
 }
 
 type Message = {
   id: string;
   sender_id: string;
-  body: string;
+  body: string | null;
+  attachment_url: string | null;
   created_at: string;
   read_at: string | null;
 };
@@ -149,15 +164,53 @@ function useMessages(conversationId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("messages")
-        .select("id, sender_id, body, created_at, read_at")
+        .select("id, sender_id, body, attachment_url, created_at, read_at")
         .eq("conversation_id", conversationId)
         .order("created_at");
       if (error) throw error;
       return data as Message[];
     },
     enabled: !!conversationId,
-    refetchInterval: 4000,
+    refetchInterval: 20_000,
   });
+}
+
+// A publicação realtime respeita a RLS de "messages" -- só chegam aqui as
+// linhas que este usuário já poderia ler (participante da conversa).
+function useRealtimeMessages(userId: string | undefined) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`messages-realtime-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages" },
+        (payload) => {
+          const message = payload.new as Message & { conversation_id: string };
+          queryClient.setQueryData<Message[]>(["messages", message.conversation_id], (old) => {
+            if (!old) return old;
+            if (old.some((m) => m.id === message.id)) return old;
+            return [...old, message];
+          });
+          queryClient.invalidateQueries({ queryKey: ["my-chats", userId] });
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "messages" },
+        (payload) => {
+          const message = payload.new as Message & { conversation_id: string };
+          queryClient.setQueryData<Message[]>(["messages", message.conversation_id], (old) =>
+            old?.map((m) => (m.id === message.id ? message : m)),
+          );
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, queryClient]);
 }
 
 function Messages() {
@@ -166,9 +219,17 @@ function Messages() {
   const { data: chats = [], error: chatsError } = useMyChats(session?.user.id);
   const [openId, setOpenId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [search, setSearch] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: messages = [] } = useMessages(openId);
+  useRealtimeMessages(session?.user.id);
 
   const openChat = chats.find((c) => c.conversationId === openId);
+  const filteredChats = chats.filter((c) =>
+    c.otherName.toLowerCase().includes(search.trim().toLowerCase()),
+  );
 
   useEffect(() => {
     if (!openId || !session?.user.id) return;
@@ -194,6 +255,26 @@ function Messages() {
     }
     queryClient.invalidateQueries({ queryKey: ["messages", openId] });
     queryClient.invalidateQueries({ queryKey: ["my-chats", session.user.id] });
+  }
+
+  async function attachPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !openId || !session) return;
+    setUploading(true);
+    try {
+      const url = await uploadPhoto(session.user.id, "chat", file);
+      const { error } = await supabase
+        .from("messages")
+        .insert({ conversation_id: openId, sender_id: session.user.id, attachment_url: url });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["messages", openId] });
+      queryClient.invalidateQueries({ queryKey: ["my-chats", session.user.id] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Não foi possível enviar a foto.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function reportExternalPayment() {
@@ -243,7 +324,13 @@ function Messages() {
             </p>
           )}
           {messages.map((m) => (
-            <Bubble key={m.id} from={m.sender_id === session?.user.id ? "me" : "them"}>
+            <Bubble
+              key={m.id}
+              from={m.sender_id === session?.user.id ? "me" : "them"}
+              read={!!m.read_at}
+              attachmentUrl={m.attachment_url}
+              onZoom={setZoomedPhoto}
+            >
               {m.body}
             </Bubble>
           ))}
@@ -254,19 +341,31 @@ function Messages() {
           </div>
         </div>
         <div className="p-3 border-t border-border flex items-center gap-2 bg-background">
-          <button className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={attachPhoto}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center shrink-0 disabled:opacity-50"
+            aria-label="Anexar foto"
+          >
             <Paperclip className="h-5 w-5 text-muted-foreground" />
           </button>
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder="Mensagem"
+            placeholder={uploading ? "Enviando foto..." : "Mensagem"}
             className="flex-1 h-11 rounded-full bg-secondary px-4 text-sm outline-none"
           />
           <button
             onClick={send}
-            className="h-11 w-11 rounded-full bg-primary flex items-center justify-center"
+            className="h-11 w-11 rounded-full bg-primary flex items-center justify-center shrink-0"
           >
             <Send className="h-4 w-4 text-primary-foreground" />
           </button>
@@ -277,6 +376,26 @@ function Messages() {
         >
           <AlertTriangle className="h-3.5 w-3.5" /> Denunciar pagamento externo
         </button>
+
+        {zoomedPhoto && (
+          <div
+            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+            onClick={() => setZoomedPhoto(null)}
+          >
+            <button
+              onClick={() => setZoomedPhoto(null)}
+              className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/10 flex items-center justify-center text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={zoomedPhoto}
+              alt=""
+              className="max-h-full max-w-full object-contain rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
       </PhoneFrame>
     );
   }
@@ -290,6 +409,8 @@ function Messages() {
           <div className="flex items-center gap-3 h-12 rounded-2xl bg-secondary px-4">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar conversas"
               className="flex-1 bg-transparent outline-none text-sm"
             />
@@ -306,7 +427,12 @@ function Messages() {
               Nenhuma conversa ainda. Elas aparecem aqui quando você contrata ou é contratado.
             </p>
           )}
-          {chats.map((c) => (
+          {!chatsError && chats.length > 0 && filteredChats.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-16">
+              Nenhuma conversa encontrada para "{search}".
+            </p>
+          )}
+          {filteredChats.map((c) => (
             <button
               key={c.conversationId}
               onClick={() => setOpenId(c.conversationId)}
@@ -340,15 +466,47 @@ function Messages() {
   );
 }
 
-function Bubble({ from, children }: { from: "me" | "them"; children: React.ReactNode }) {
+function Bubble({
+  from,
+  read,
+  attachmentUrl,
+  onZoom,
+  children,
+}: {
+  from: "me" | "them";
+  read: boolean;
+  attachmentUrl: string | null;
+  onZoom: (url: string) => void;
+  children: string | null;
+}) {
   const me = from === "me";
   return (
-    <div className={`flex ${me ? "justify-end" : "justify-start"}`}>
+    <div className={`flex flex-col ${me ? "items-end" : "items-start"}`}>
       <div
-        className={`max-w-[75%] px-3.5 py-2.5 text-sm rounded-2xl shadow-card ${me ? "bg-primary text-primary-foreground rounded-br-md" : "bg-background rounded-bl-md"}`}
+        className={`max-w-[75%] text-sm rounded-2xl shadow-card overflow-hidden ${me ? "bg-primary text-primary-foreground rounded-br-md" : "bg-background rounded-bl-md"} ${attachmentUrl ? "p-1.5" : "px-3.5 py-2.5"}`}
       >
-        {children}
+        {attachmentUrl && (
+          <button onClick={() => onZoom(attachmentUrl)} className="block">
+            <img
+              src={attachmentUrl}
+              alt="Foto enviada no chat"
+              className="max-h-64 w-full rounded-xl object-cover"
+            />
+          </button>
+        )}
+        {children && <p className={attachmentUrl ? "px-2 pt-2 pb-1" : ""}>{children}</p>}
       </div>
+      {me && (
+        <span className="flex items-center gap-1 mt-0.5 mr-1 text-[10px] text-muted-foreground">
+          {read ? (
+            <>
+              <CheckCheck className="h-3 w-3 text-trust" /> Visto
+            </>
+          ) : (
+            <Check className="h-3 w-3" />
+          )}
+        </span>
+      )}
     </div>
   );
 }
