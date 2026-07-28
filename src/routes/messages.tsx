@@ -7,6 +7,7 @@ import {
   Search,
   Send,
   Paperclip,
+  Camera,
   ChevronLeft,
   AlertTriangle,
   Check,
@@ -208,6 +209,7 @@ function Messages() {
   const [uploading, setUploading] = useState(false);
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { data: messages = [] } = useMessages(openId);
   useRealtimeMessages(session?.user.id);
 
@@ -338,11 +340,27 @@ function Messages() {
             className="hidden"
             onChange={attachPhoto}
           />
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={attachPhoto}
+          />
+          <button
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={uploading}
+            className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center shrink-0 disabled:opacity-50"
+            aria-label="Tirar foto"
+          >
+            <Camera className="h-5 w-5 text-muted-foreground" />
+          </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
             className="h-11 w-11 rounded-full bg-secondary flex items-center justify-center shrink-0 disabled:opacity-50"
-            aria-label="Anexar foto"
+            aria-label="Anexar foto da galeria"
           >
             <Paperclip className="h-5 w-5 text-muted-foreground" />
           </button>

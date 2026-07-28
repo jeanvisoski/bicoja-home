@@ -77,6 +77,7 @@ function BecomeProvider() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [sending, setSending] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoCameraInputRef = useRef<HTMLInputElement>(null);
 
   async function checkRegion() {
     setCheckingRegion(true);
@@ -489,6 +490,14 @@ function BecomeProvider() {
             className="hidden"
             onChange={(event) => setProfilePhoto(event.target.files?.[0] ?? null)}
           />
+          <input
+            ref={photoCameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="user"
+            className="hidden"
+            onChange={(event) => setProfilePhoto(event.target.files?.[0] ?? null)}
+          />
           <button
             type="button"
             onClick={() => photoInputRef.current?.click()}
@@ -523,6 +532,13 @@ function BecomeProvider() {
                 Obrigatória para clientes reconhecerem você.
               </span>
             </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => photoCameraInputRef.current?.click()}
+            className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary"
+          >
+            <Camera className="h-3.5 w-3.5" /> Tirar foto agora com a câmera
           </button>
         </section>
 

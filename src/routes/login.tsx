@@ -91,6 +91,7 @@ function Login() {
   const [providerTermsAccepted, setProviderTermsAccepted] = useState(false);
   const nav = useNavigate();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoCameraInputRef = useRef<HTMLInputElement>(null);
   const { data: categories = [] } = useCategories();
   const { data: launchRegionSettings, isLoading: loadingRegionSettings } =
     useLaunchRegionSettings();
@@ -856,6 +857,14 @@ function Login() {
                   className="hidden"
                   onChange={(event) => setProfilePhoto(event.target.files?.[0] ?? null)}
                 />
+                <input
+                  ref={photoCameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="user"
+                  className="hidden"
+                  onChange={(event) => setProfilePhoto(event.target.files?.[0] ?? null)}
+                />
                 <button
                   type="button"
                   onClick={() => photoInputRef.current?.click()}
@@ -880,6 +889,13 @@ function Login() {
                       Obrigatória para clientes reconhecerem você.
                     </span>
                   </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => photoCameraInputRef.current?.click()}
+                  className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-primary"
+                >
+                  <Camera className="h-3.5 w-3.5" /> Tirar foto agora com a câmera
                 </button>
               </section>
               <p className="text-[11px] text-muted-foreground px-1">

@@ -215,6 +215,7 @@ function ProProfile() {
   const { data: completedPhotos = [] } = useCompletedJobPhotos(userId);
   const { data: categories = [] } = useCategories();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const photoCameraInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
 
   const [radiusKm, setRadiusKm] = useState(30);
@@ -462,6 +463,14 @@ function ProProfile() {
               className="hidden"
               onChange={changeProfilePhoto}
             />
+            <input
+              ref={photoCameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="hidden"
+              onChange={changeProfilePhoto}
+            />
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
@@ -483,6 +492,14 @@ function ProProfile() {
               <span className="absolute right-1 bottom-1 h-7 w-7 rounded-full bg-background text-primary flex items-center justify-center shadow-card">
                 <Camera className="h-4 w-4" />
               </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => photoCameraInputRef.current?.click()}
+              disabled={savingPhoto}
+              className="mt-1.5 text-[11px] font-semibold opacity-90 underline underline-offset-2 disabled:opacity-50"
+            >
+              Tirar foto agora com a câmera
             </button>
             <div className="flex items-center gap-1 mt-3">
               <p className="text-xl font-extrabold font-[Manrope]">

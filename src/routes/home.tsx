@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { Search, Lock, Star, BadgeCheck, Bell, Plus, CalendarClock } from "lucide-react";
+import { Search, Lock, Star, BadgeCheck, Bell, Plus, CalendarClock, Sparkles } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { BottomNav } from "@/components/bicoja/BottomNav";
 import { supabase } from "@/lib/supabase";
@@ -338,7 +338,7 @@ function Home() {
               Veja o que eles já entregaram e contrate sem esperar propostas.
             </p>
             <div className="flex gap-3 overflow-x-auto px-5 pb-2 [&::-webkit-scrollbar]:hidden">
-              {pros.map((p) => {
+              {pros.map((p, i) => {
                 const name = p.profiles?.full_name || "Prestador BICOJÁ";
                 const thumb = portfolioThumbs?.get(p.profile_id);
                 return (
@@ -348,7 +348,15 @@ function Home() {
                     params={{ providerId: p.profile_id }}
                     className="min-w-[210px] rounded-2xl bg-card border border-border shadow-card overflow-hidden"
                   >
-                    {thumb && <img src={thumb} alt="" className="h-24 w-full object-cover" />}
+                    {thumb ? (
+                      <img src={thumb} alt="" className="h-24 w-full object-cover" />
+                    ) : (
+                      <div
+                        className={`h-24 w-full flex items-center justify-center ${CATEGORY_TINTS[i % CATEGORY_TINTS.length]}`}
+                      >
+                        <Sparkles className="h-7 w-7 opacity-50" />
+                      </div>
+                    )}
                     <div className="p-4">
                       <ProfileAvatar
                         name={name}
