@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Star, BadgeCheck, Clock, Inbox } from "lucide-react";
+import { Star, BadgeCheck, Clock, Inbox, MessageCircle } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { supabase } from "@/lib/supabase";
@@ -61,6 +62,27 @@ function Proposals() {
   const nav = useNavigate();
   const queryClient = useQueryClient();
   const { data: proposals = [], isLoading } = useProposals(requestId);
+  const [messaging, setMessaging] = useState<string | null>(null);
+
+  async function message(providerId: string) {
+    if (!session) {
+      toast.error("Entre na sua conta para conversar.");
+      nav({ to: "/login" });
+      return;
+    }
+    if (!requestId) return;
+    setMessaging(providerId);
+    const { data: conversationId, error } = await supabase.rpc("start_provider_conversation", {
+      p_request_id: requestId,
+      p_provider_id: providerId,
+    });
+    setMessaging(null);
+    if (error || !conversationId) {
+      toast.error(error?.message ?? "Não foi possível iniciar a conversa.");
+      return;
+    }
+    nav({ to: "/messages", search: { conversationId } });
+  }
 
   async function hire(proposalId: string) {
     if (!session) {
@@ -169,18 +191,26 @@ function Proposals() {
                   )}
                 </div>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-4 grid grid-cols-3 gap-2">
                 <Link
                   to="/providers/$providerId"
                   params={{ providerId: provider?.profile_id ?? "" }}
-                  className="h-11 rounded-xl border border-border bg-card font-semibold text-sm flex items-center justify-center gap-2"
+                  className="h-11 rounded-xl border border-border bg-card font-semibold text-xs flex items-center justify-center gap-1.5 px-1"
                 >
                   Ver perfil
                 </Link>
                 <button
+                  onClick={() => provider && message(provider.profile_id)}
+                  disabled={!provider || messaging === provider.profile_id}
+                  className="h-11 rounded-xl border border-border bg-card font-semibold text-xs flex items-center justify-center gap-1.5 px-1 disabled:opacity-50"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 shrink-0" />
+                  {messaging === provider?.profile_id ? "..." : "Mensagem"}
+                </button>
+                <button
                   onClick={() => hire(p.id)}
                   disabled={p.status !== "pendente"}
-                  className="h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-50"
+                  className="h-11 rounded-xl bg-primary text-primary-foreground font-semibold text-xs flex items-center justify-center active:scale-[0.98] transition-transform disabled:opacity-50 px-1"
                 >
                   {p.status === "aceita"
                     ? "Contratado"

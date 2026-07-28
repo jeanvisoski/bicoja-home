@@ -25,12 +25,15 @@ import { getViewMode } from "@/lib/view-mode";
 
 export const Route = createFileRoute("/messages")({
   component: Messages,
+  validateSearch: (search: Record<string, unknown>): { conversationId?: string } => ({
+    conversationId: typeof search.conversationId === "string" ? search.conversationId : undefined,
+  }),
   head: () => ({ meta: [{ title: "Mensagens — BICOJÁ" }] }),
 });
 
 type ChatSummary = {
   conversationId: string;
-  orderId: string;
+  orderId: string | null;
   otherName: string;
   otherAvatarUrl: string | null;
   otherProfileId: string;
@@ -39,15 +42,23 @@ type ChatSummary = {
   lastMessage: string | null;
 };
 
-async function fetchChatsAsClient(userId: string): Promise<ChatSummary[]> {
+// Conversa não depende mais de existir um pedido -- pode começar já a
+// partir de uma proposta (ver start_provider_conversation), então busca
+// direto em conversations em vez de derivar a partir de orders.
+async function fetchChats(userId: string): Promise<ChatSummary[]> {
   const { data, error } = await supabase
-    .from("orders")
-    .select("id, conversations(id), provider_profiles(profile_id, profiles(full_name, avatar_url))")
-    .eq("client_id", userId)
+    .from("conversations")
+    .select(
+      "id, order_id, client_id, provider_id, profiles(full_name, avatar_url), provider_profiles(profile_id, profiles(full_name, avatar_url))",
+    )
+    .or(`client_id.eq.${userId},provider_id.eq.${userId}`)
     .returns<
       {
         id: string;
-        conversations: { id: string } | null;
+        order_id: string | null;
+        client_id: string;
+        provider_id: string;
+        profiles: { full_name: string | null; avatar_url: string | null } | null;
         provider_profiles: {
           profile_id: string;
           profiles: { full_name: string | null; avatar_url: string | null } | null;
@@ -55,46 +66,23 @@ async function fetchChatsAsClient(userId: string): Promise<ChatSummary[]> {
       }[]
     >();
   if (error) throw error;
-  return data
-    .filter((o) => o.conversations)
-    .map((o) => ({
-      conversationId: o.conversations!.id,
-      orderId: o.id,
-      otherName: o.provider_profiles?.profiles?.full_name ?? "Prestador",
-      otherAvatarUrl: o.provider_profiles?.profiles?.avatar_url ?? null,
-      otherProfileId: o.provider_profiles?.profile_id ?? "",
+  return data.map((c) => {
+    const iAmClient = c.client_id === userId;
+    return {
+      conversationId: c.id,
+      orderId: c.order_id,
+      otherName: iAmClient
+        ? (c.provider_profiles?.profiles?.full_name ?? "Prestador")
+        : (c.profiles?.full_name ?? "Cliente"),
+      otherAvatarUrl: iAmClient
+        ? (c.provider_profiles?.profiles?.avatar_url ?? null)
+        : (c.profiles?.avatar_url ?? null),
+      otherProfileId: iAmClient ? c.provider_id : c.client_id,
       otherLastSeenAt: null,
       unreadCount: 0,
       lastMessage: null,
-    }));
-}
-
-async function fetchChatsAsProvider(userId: string): Promise<ChatSummary[]> {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("id, client_id, conversations(id), profiles(full_name, avatar_url)")
-    .eq("provider_id", userId)
-    .returns<
-      {
-        id: string;
-        client_id: string;
-        conversations: { id: string } | null;
-        profiles: { full_name: string | null; avatar_url: string | null } | null;
-      }[]
-    >();
-  if (error) throw error;
-  return data
-    .filter((o) => o.conversations)
-    .map((o) => ({
-      conversationId: o.conversations!.id,
-      orderId: o.id,
-      otherName: o.profiles?.full_name ?? "Cliente",
-      otherAvatarUrl: o.profiles?.avatar_url ?? null,
-      otherProfileId: o.client_id,
-      otherLastSeenAt: null,
-      unreadCount: 0,
-      lastMessage: null,
-    }));
+    };
+  });
 }
 
 function useMyChats(userId: string | undefined) {
@@ -102,11 +90,7 @@ function useMyChats(userId: string | undefined) {
     queryKey: ["my-chats", userId],
     queryFn: async () => {
       if (!userId) return [];
-      const [asClient, asProvider] = await Promise.all([
-        fetchChatsAsClient(userId),
-        fetchChatsAsProvider(userId),
-      ]);
-      const chats = [...asClient, ...asProvider];
+      const chats = await fetchChats(userId);
       if (chats.length === 0) return chats;
       // Presença é opcional para manter conversas disponíveis antes da migration.
       const { data: presence } = await supabase
@@ -214,10 +198,11 @@ function useRealtimeMessages(userId: string | undefined) {
 }
 
 function Messages() {
+  const { conversationId } = Route.useSearch();
   const { session } = useSession();
   const queryClient = useQueryClient();
   const { data: chats = [], error: chatsError } = useMyChats(session?.user.id);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(conversationId ?? null);
   const [draft, setDraft] = useState("");
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -225,6 +210,10 @@ function Messages() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: messages = [] } = useMessages(openId);
   useRealtimeMessages(session?.user.id);
+
+  useEffect(() => {
+    if (conversationId) setOpenId(conversationId);
+  }, [conversationId]);
 
   const openChat = chats.find((c) => c.conversationId === openId);
   const filteredChats = chats.filter((c) =>
@@ -283,6 +272,7 @@ function Messages() {
     if (!reason?.trim()) return;
     const { error } = await supabase.from("trust_reports").insert({
       order_id: openChat.orderId,
+      conversation_id: openChat.conversationId,
       reporter_id: session.user.id,
       reported_user_id: openChat.otherProfileId,
       category: "pagamento_externo",
@@ -424,7 +414,8 @@ function Messages() {
           )}
           {!chatsError && chats.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-16">
-              Nenhuma conversa ainda. Elas aparecem aqui quando você contrata ou é contratado.
+              Nenhuma conversa ainda. Elas aparecem aqui quando você recebe uma proposta, contrata
+              ou é contratado.
             </p>
           )}
           {!chatsError && chats.length > 0 && filteredChats.length === 0 && (
