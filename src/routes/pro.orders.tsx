@@ -15,6 +15,7 @@ import {
   Send,
   Inbox,
   Loader2,
+  PlusCircle,
 } from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
@@ -109,6 +110,42 @@ function useOrderDetail(orderId: string | undefined) {
       return { ...data, profiles: client };
     },
     enabled: !!orderId,
+  });
+}
+
+type ExtraCharge = {
+  id: string;
+  amount: number;
+  total: number;
+  reason: string;
+  status: "solicitado" | "aprovado" | "recusado" | "pago" | "cancelado";
+  client_note: string | null;
+};
+
+const EXTRA_CHARGE_STATUS: Record<ExtraCharge["status"], string> = {
+  solicitado: "Aguardando resposta do cliente",
+  aprovado: "Aprovado — aguardando pagamento",
+  pago: "Pago",
+  recusado: "Recusado pelo cliente",
+  cancelado: "Cancelado",
+};
+
+function useOrderExtraCharge(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ["order-extra-charge", orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_extra_charges")
+        .select("id, amount, total, reason, status, client_note")
+        .eq("order_id", orderId)
+        .order("requested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<ExtraCharge>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orderId,
+    refetchInterval: 10_000,
   });
 }
 
@@ -209,6 +246,7 @@ function ProOrder() {
 
   const { data: request } = useRequestDetail(requestId);
   const { data: order } = useOrderDetail(orderId);
+  const { data: extraCharge } = useOrderExtraCharge(orderId);
   const { data: existingProposal } = useExistingProposal(requestId, session?.user.id);
   const { data: myProposals = [], isLoading: loadingProposals } = useMyProposals(session?.user.id);
   const { data: questions = [] } = useRequestQuestions(requestId);
@@ -245,6 +283,10 @@ function ProOrder() {
   const [scheduledEndTime, setScheduledEndTime] = useState("");
   const [scheduleTouched, setScheduleTouched] = useState(false);
   const [sending, setSending] = useState(false);
+  const [showExtraChargeForm, setShowExtraChargeForm] = useState(false);
+  const [extraAmount, setExtraAmount] = useState("");
+  const [extraReason, setExtraReason] = useState("");
+  const [requestingExtra, setRequestingExtra] = useState(false);
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const libraryInputRef = useRef<HTMLInputElement>(null);
@@ -452,6 +494,35 @@ function ProOrder() {
       await supabase.from("order_provider_locations").delete().eq("order_id", orderId);
     }
     return true;
+  }
+
+  async function requestExtraCharge() {
+    if (!orderId) return;
+    const amount = Number(extraAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Informe um valor válido para o acréscimo.");
+      return;
+    }
+    if (extraReason.trim().length < 10) {
+      toast.error("Explique o motivo com pelo menos 10 caracteres.");
+      return;
+    }
+    setRequestingExtra(true);
+    const { error } = await supabase.rpc("request_order_extra_charge", {
+      p_order_id: orderId,
+      p_amount: amount,
+      p_reason: extraReason.trim(),
+    });
+    setRequestingExtra(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Pedido de acréscimo enviado ao cliente.");
+    setShowExtraChargeForm(false);
+    setExtraAmount("");
+    setExtraReason("");
+    queryClient.invalidateQueries({ queryKey: ["order-extra-charge", orderId] });
   }
 
   async function markOnTheWay() {
@@ -875,6 +946,71 @@ function ProOrder() {
                     ))}
                   </div>
                 </>
+              )}
+
+              {(status === "a_caminho" || status === "executando") && (
+                <div className="rounded-2xl bg-card border border-border p-4">
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Precisou de mais do que o combinado?
+                  </p>
+                  {extraCharge &&
+                  extraCharge.status !== "recusado" &&
+                  extraCharge.status !== "cancelado" ? (
+                    <div className="rounded-xl bg-secondary/60 p-3">
+                      <p className="text-sm font-semibold">
+                        Acréscimo de R$ {Number(extraCharge.total).toFixed(2)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {EXTRA_CHARGE_STATUS[extraCharge.status]}
+                      </p>
+                    </div>
+                  ) : showExtraChargeForm ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">R$</span>
+                        <input
+                          value={extraAmount}
+                          onChange={(e) => setExtraAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                          placeholder="Valor a mais"
+                          inputMode="decimal"
+                          className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-sm outline-none"
+                        />
+                      </div>
+                      <textarea
+                        value={extraReason}
+                        onChange={(e) => setExtraReason(e.target.value)}
+                        placeholder="Explique o motivo pro cliente (ex.: precisou de 2m a mais de cano)"
+                        className="w-full h-20 p-3 rounded-xl bg-background border border-border text-sm resize-none outline-none"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => setShowExtraChargeForm(false)}
+                          className="h-11 rounded-xl border border-border text-sm font-semibold"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={requestExtraCharge}
+                          disabled={requestingExtra}
+                          className="h-11 rounded-xl bg-primary text-primary-foreground text-sm font-semibold disabled:opacity-50"
+                        >
+                          {requestingExtra ? "Enviando..." : "Enviar ao cliente"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowExtraChargeForm(true)}
+                      className="w-full h-11 rounded-xl border border-dashed border-primary/40 text-primary text-sm font-semibold flex items-center justify-center gap-2"
+                    >
+                      <PlusCircle className="h-4 w-4" /> Solicitar acréscimo de valor
+                    </button>
+                  )}
+                  <p className="text-[11px] text-muted-foreground mt-2">
+                    O cliente aprova e paga pelo app — combinar valor extra por fora não conta com a
+                    garantia BICOJÁ.
+                  </p>
+                </div>
               )}
             </div>
           )}

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AddressesRouteImport } from './routes/addresses'
 import { Route as BecomeProviderRouteImport } from './routes/become-provider'
 import { Route as ConfirmRouteImport } from './routes/confirm'
+import { Route as ExtraChargeRouteImport } from './routes/extra-charge'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as LoginRouteImport } from './routes/login'
@@ -58,6 +59,11 @@ const BecomeProviderRoute = BecomeProviderRouteImport.update({
 const ConfirmRoute = ConfirmRouteImport.update({
   id: '/confirm',
   path: '/confirm',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExtraChargeRoute = ExtraChargeRouteImport.update({
+  id: '/extra-charge',
+  path: '/extra-charge',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HelpRoute = HelpRouteImport.update({
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/addresses': typeof AddressesRoute
   '/become-provider': typeof BecomeProviderRoute
   '/confirm': typeof ConfirmRoute
+  '/extra-charge': typeof ExtraChargeRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
@@ -228,6 +235,7 @@ export interface FileRoutesByTo {
   '/addresses': typeof AddressesRoute
   '/become-provider': typeof BecomeProviderRoute
   '/confirm': typeof ConfirmRoute
+  '/extra-charge': typeof ExtraChargeRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/addresses': typeof AddressesRoute
   '/become-provider': typeof BecomeProviderRoute
   '/confirm': typeof ConfirmRoute
+  '/extra-charge': typeof ExtraChargeRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/login': typeof LoginRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/addresses'
     | '/become-provider'
     | '/confirm'
+    | '/extra-charge'
     | '/help'
     | '/home'
     | '/login'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/addresses'
     | '/become-provider'
     | '/confirm'
+    | '/extra-charge'
     | '/help'
     | '/home'
     | '/login'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/addresses'
     | '/become-provider'
     | '/confirm'
+    | '/extra-charge'
     | '/help'
     | '/home'
     | '/login'
@@ -390,6 +402,7 @@ export interface RootRouteChildren {
   AddressesRoute: typeof AddressesRoute
   BecomeProviderRoute: typeof BecomeProviderRoute
   ConfirmRoute: typeof ConfirmRoute
+  ExtraChargeRoute: typeof ExtraChargeRoute
   HelpRoute: typeof HelpRoute
   HomeRoute: typeof HomeRoute
   LoginRoute: typeof LoginRoute
@@ -441,6 +454,13 @@ declare module '@tanstack/react-router' {
       path: '/confirm'
       fullPath: '/confirm'
       preLoaderRoute: typeof ConfirmRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/extra-charge': {
+      id: '/extra-charge'
+      path: '/extra-charge'
+      fullPath: '/extra-charge'
+      preLoaderRoute: typeof ExtraChargeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/help': {
@@ -651,6 +671,7 @@ const rootRouteChildren: RootRouteChildren = {
   AddressesRoute: AddressesRoute,
   BecomeProviderRoute: BecomeProviderRoute,
   ConfirmRoute: ConfirmRoute,
+  ExtraChargeRoute: ExtraChargeRoute,
   HelpRoute: HelpRoute,
   HomeRoute: HomeRoute,
   LoginRoute: LoginRoute,

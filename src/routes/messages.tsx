@@ -41,7 +41,20 @@ type ChatSummary = {
   otherLastSeenAt: string | null;
   unreadCount: number;
   lastMessage: string | null;
+  iAmClient: boolean;
 };
+
+// Detecta telefone/WhatsApp escrito na mensagem pra avisar (não bloquear)
+// que combinar por fora tira a garantia BICOJÁ -- ver diagnóstico de fluxo
+// de 2026-07-29: nada impedia isso antes, e é o gatilho mais comum de
+// combinar o serviço por fora do app.
+const PHONE_PATTERN = /(\(?\d{2}\)?[\s.-]?)?9?\d{4}[\s.-]?\d{4}/;
+const CONTACT_KEYWORDS = /whats\s*app|whatsapp|\bzap\b|\bzapzap\b/i;
+
+function looksLikeContactInfo(text: string) {
+  const digits = text.replace(/\D/g, "");
+  return (digits.length >= 8 && PHONE_PATTERN.test(text)) || CONTACT_KEYWORDS.test(text);
+}
 
 // Conversa não depende mais de existir um pedido -- pode começar já a
 // partir de uma proposta (ver start_provider_conversation), então busca
@@ -82,6 +95,7 @@ async function fetchChats(userId: string): Promise<ChatSummary[]> {
       otherLastSeenAt: null,
       unreadCount: 0,
       lastMessage: null,
+      iAmClient,
     };
   });
 }
@@ -198,6 +212,90 @@ function useRealtimeMessages(userId: string | undefined) {
   }, [userId, queryClient]);
 }
 
+function useOrderStatus(orderId: string | null) {
+  return useQuery({
+    queryKey: ["chat-order-status", orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("status")
+        .eq("id", orderId)
+        .single();
+      if (error) throw error;
+      return data.status as string;
+    },
+    enabled: !!orderId,
+    refetchInterval: 15_000,
+  });
+}
+
+const QUICK_REPLIES_CLIENT: Record<string, string[]> = {
+  aceito: ["Que horas você chega?", "Pode confirmar o horário combinado?"],
+  a_caminho: ["Quanto tempo falta?", "Estou te esperando no endereço"],
+  executando: ["Como está indo?", "Pode me mandar uma foto?"],
+  fotos_enviadas: ["Ficou ótimo, obrigado!", "Vou revisar e confirmar por aqui"],
+  aguardando_confirmacao: ["Ficou ótimo, obrigado!", "Vou revisar e confirmar por aqui"],
+};
+const QUICK_REPLIES_PROVIDER: Record<string, string[]> = {
+  aceito: ["Estou a caminho em breve", "Pode confirmar o endereço?"],
+  a_caminho: ["Chegando em 10 minutos", "Estou a caminho"],
+  executando: ["Serviço em andamento", "Vou precisar de mais um pouco de tempo"],
+  fotos_enviadas: [
+    "Serviço concluído, pode conferir as fotos",
+    "Qualquer dúvida me avise por aqui",
+  ],
+  aguardando_confirmacao: ["Qualquer dúvida me avise por aqui"],
+};
+const QUICK_REPLIES_DEFAULT = ["Olá!", "Obrigado!"];
+
+function quickRepliesFor(iAmClient: boolean, status: string | undefined) {
+  const table = iAmClient ? QUICK_REPLIES_CLIENT : QUICK_REPLIES_PROVIDER;
+  return (status && table[status]) || QUICK_REPLIES_DEFAULT;
+}
+
+// Indicador de "digitando" via broadcast do Realtime -- não grava nada no
+// banco, é só um sinal efêmero entre os dois participantes da conversa.
+function useTypingIndicator(conversationId: string | null, userId: string | undefined) {
+  const [othersTypingUntil, setOthersTypingUntil] = useState(0);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastSentRef = useRef(0);
+
+  useEffect(() => {
+    setOthersTypingUntil(0);
+    if (!conversationId || !userId) return;
+    const channel = supabase
+      .channel(`typing-${conversationId}`)
+      .on("broadcast", { event: "typing" }, (payload) => {
+        if (payload.payload?.userId === userId) return;
+        setOthersTypingUntil(Date.now() + 3_000);
+      })
+      .subscribe();
+    channelRef.current = channel;
+    return () => {
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [conversationId, userId]);
+
+  function notifyTyping() {
+    const now = Date.now();
+    if (now - lastSentRef.current < 1_500) return;
+    lastSentRef.current = now;
+    channelRef.current?.send({ type: "broadcast", event: "typing", payload: { userId } });
+  }
+
+  // Força um novo render perto do fim da janela de 3s pra "digitando..."
+  // sumir sozinho mesmo sem chegar outro evento de broadcast.
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    if (othersTypingUntil === 0) return;
+    const id = setInterval(() => forceTick((t) => t + 1), 500);
+    return () => clearInterval(id);
+  }, [othersTypingUntil]);
+
+  return { othersTyping: Date.now() < othersTypingUntil, notifyTyping };
+}
+
 function Messages() {
   const { conversationId } = Route.useSearch();
   const { session } = useSession();
@@ -212,12 +310,16 @@ function Messages() {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { data: messages = [] } = useMessages(openId);
   useRealtimeMessages(session?.user.id);
+  const openChat = chats.find((c) => c.conversationId === openId);
+  const { data: orderStatus } = useOrderStatus(openChat?.orderId ?? null);
+  const { othersTyping, notifyTyping } = useTypingIndicator(openId, session?.user.id);
 
   useEffect(() => {
     if (conversationId) setOpenId(conversationId);
   }, [conversationId]);
 
-  const openChat = chats.find((c) => c.conversationId === openId);
+  const draftLooksLikeContact = looksLikeContactInfo(draft);
+  const quickReplies = quickRepliesFor(openChat?.iAmClient ?? true, orderStatus);
   const filteredChats = chats.filter((c) =>
     c.otherName.toLowerCase().includes(search.trim().toLowerCase()),
   );
@@ -303,12 +405,18 @@ function Messages() {
               <BadgeCheck className="h-4 w-4 text-trust" />
             </div>
             <p
-              className={`text-[11px] ${isOnline(openChat.otherLastSeenAt) ? "text-trust" : "text-muted-foreground"}`}
+              className={`text-[11px] ${othersTyping ? "text-primary font-semibold" : isOnline(openChat.otherLastSeenAt) ? "text-trust" : "text-muted-foreground"}`}
             >
-              {presenceLabel(openChat.otherLastSeenAt)}
+              {othersTyping ? "Digitando..." : presenceLabel(openChat.otherLastSeenAt)}
             </p>
           </div>
         </header>
+        <div className="px-4 py-2 bg-trust-soft/50 border-b border-border flex items-center gap-2">
+          <BadgeCheck className="h-3.5 w-3.5 text-trust shrink-0" />
+          <p className="text-[11px] text-trust font-medium">
+            Combine tudo por aqui — a garantia BICOJÁ só vale pra pedidos combinados no app.
+          </p>
+        </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-secondary/40">
           {messages.length === 0 && (
             <p className="text-center text-xs text-muted-foreground py-8">
@@ -332,6 +440,27 @@ function Messages() {
             </span>
           </div>
         </div>
+        {!draft && quickReplies.length > 0 && (
+          <div className="px-3 pt-2 bg-background flex gap-2 overflow-x-auto">
+            {quickReplies.map((reply) => (
+              <button
+                key={reply}
+                onClick={() => setDraft(reply)}
+                className="shrink-0 rounded-full border border-border bg-secondary/60 px-3 py-1.5 text-xs font-medium text-foreground whitespace-nowrap"
+              >
+                {reply}
+              </button>
+            ))}
+          </div>
+        )}
+        {draftLooksLikeContact && (
+          <div className="px-4 pt-2 bg-background flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+            <p className="text-[11px] text-amber-700">
+              Isso parece um contato. Fora do app, você perde a garantia e a mediação BICOJÁ.
+            </p>
+          </div>
+        )}
         <div className="p-3 border-t border-border flex items-center gap-2 bg-background">
           <input
             ref={fileInputRef}
@@ -366,7 +495,10 @@ function Messages() {
           </button>
           <input
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              if (e.target.value.trim()) notifyTyping();
+            }}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder={uploading ? "Enviando foto..." : "Mensagem"}
             className="flex-1 h-11 rounded-full bg-secondary px-4 text-sm outline-none"

@@ -1,6 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Check, MessageCircle, Phone, BadgeCheck, Star, CalendarClock } from "lucide-react";
+import {
+  Check,
+  MessageCircle,
+  Phone,
+  BadgeCheck,
+  Star,
+  CalendarClock,
+  AlertTriangle,
+} from "lucide-react";
 import { PhoneFrame } from "@/components/bicoja/PhoneFrame";
 import { AppHeader } from "@/components/bicoja/AppHeader";
 import { MapView } from "@/components/bicoja/MapView";
@@ -94,9 +102,36 @@ function useOrder(orderId: string | undefined) {
   });
 }
 
+type PendingExtraCharge = {
+  id: string;
+  total: number;
+  status: "solicitado" | "aprovado";
+};
+
+function usePendingExtraCharge(orderId: string | undefined) {
+  return useQuery({
+    queryKey: ["order-pending-extra-charge", orderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("order_extra_charges")
+        .select("id, total, status")
+        .eq("order_id", orderId)
+        .in("status", ["solicitado", "aprovado"])
+        .order("requested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<PendingExtraCharge>();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!orderId,
+    refetchInterval: 10_000,
+  });
+}
+
 function Tracking() {
   const { orderId } = Route.useSearch();
   const { data: order } = useOrder(orderId);
+  const { data: pendingExtraCharge } = usePendingExtraCharge(orderId);
 
   const statusIndex = order
     ? STATUS_ORDER.indexOf(order.status as (typeof STATUS_ORDER)[number])
@@ -207,8 +242,36 @@ function Tracking() {
                 </button>
               )}
             </div>
+            {providerWhatsApp && (
+              <p className="text-[11px] text-muted-foreground mt-2">
+                O chat do app mantém sua garantia BICOJÁ — o WhatsApp é só para casos urgentes, fora
+                da proteção da plataforma.
+              </p>
+            )}
           </div>
         </div>
+
+        {pendingExtraCharge && (
+          <div className="px-5 pt-4">
+            <Link
+              to="/extra-charge"
+              search={{ chargeId: pendingExtraCharge.id }}
+              className="flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4"
+            >
+              <AlertTriangle className="h-5 w-5 text-amber-700 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-900">
+                  {pendingExtraCharge.status === "solicitado"
+                    ? "O prestador pediu um acréscimo de valor"
+                    : "Acréscimo aprovado — falta pagar"}
+                </p>
+                <p className="text-xs text-amber-800">
+                  R$ {Number(pendingExtraCharge.total).toFixed(2)} · toque para revisar
+                </p>
+              </div>
+            </Link>
+          </div>
+        )}
 
         {order?.scheduled_date && (
           <div className="px-5 pt-4">

@@ -30,6 +30,26 @@ Deno.serve(async (request) => {
     });
     const payment = await paymentResponse.json();
     if (!paymentResponse.ok) throw new Error("Nao foi possivel consultar o pagamento.");
+
+    // Cobrança de acréscimo de valor (order_extra_charges) tem seu próprio
+    // fluxo de confirmação -- não é um pedido novo, é um pagamento extra
+    // sobre um pedido já em andamento.
+    const extraChargeId = payment.metadata?.bicoja_extra_charge_id;
+    if (extraChargeId) {
+      await admin
+        .from("order_extra_charges")
+        .update({ gateway_payment_id: String(payment.id) })
+        .eq("id", extraChargeId);
+      if (payment.status === "approved") {
+        const { error } = await admin.rpc("confirm_extra_charge_gateway_payment", {
+          p_charge_id: extraChargeId,
+          p_gateway_payment_id: String(payment.id),
+        });
+        if (error) throw error;
+      }
+      return new Response("ok", { status: 200 });
+    }
+
     const orderId = payment.external_reference || payment.metadata?.bicoja_order_id;
     if (!orderId) return new Response("missing order", { status: 200 });
 
