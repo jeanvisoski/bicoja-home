@@ -31,7 +31,9 @@ Deno.serve(async (request) => {
       await Promise.all([
         admin
           .from("orders")
-          .select("id, client_id, total, status, payment_status")
+          .select(
+            "id, client_id, total, status, payment_status, pricing_type, quoted_price_min, quoted_price_max",
+          )
           .eq("id", orderId)
           .single(),
         admin
@@ -97,6 +99,10 @@ Deno.serve(async (request) => {
         items: [
           {
             title: "Servico BICOJA",
+            description:
+              order.pricing_type === "range"
+                ? `Orcamento em faixa (R$ ${Number(order.quoted_price_min).toFixed(2)} a R$ ${Number(order.quoted_price_max).toFixed(2)}). Cobranca no valor maximo da faixa; a diferenca para o valor final e reembolsada automaticamente apos a confirmacao do servico.`
+                : undefined,
             quantity: 1,
             currency_id: "BRL",
             unit_price: Number(order.total),
