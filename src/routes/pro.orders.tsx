@@ -233,7 +233,9 @@ function ProOrder() {
     queryClient.invalidateQueries({ queryKey: ["request-questions", requestId] });
   }
 
+  const [pricingType, setPricingType] = useState<"fixed" | "range">("fixed");
   const [price, setPrice] = useState("");
+  const [priceMax, setPriceMax] = useState("");
   const [eta, setEta] = useState("");
   const [duration, setDuration] = useState("");
   const [finalPrice, setFinalPrice] = useState("");
@@ -358,8 +360,13 @@ function ProOrder() {
   async function sendProposal() {
     if (!session || !requestId) return;
     const min = Number(price);
+    const max = pricingType === "range" ? Number(priceMax) : min;
     if (!min) {
       toast.error("Informe um valor válido para o orçamento.");
+      return;
+    }
+    if (pricingType === "range" && (!max || max <= min)) {
+      toast.error("Informe um valor máximo maior que o mínimo.");
       return;
     }
     if (!scheduledDate || !scheduledStartTime || !scheduledEndTime) {
@@ -374,10 +381,10 @@ function ProOrder() {
     const { error } = await supabase.from("proposals").insert({
       request_id: requestId,
       provider_id: session.user.id,
-      price: min,
-      pricing_type: "fixed",
+      price: pricingType === "range" ? max : min,
+      pricing_type: pricingType,
       price_min: min,
-      price_max: min,
+      price_max: max,
       eta_minutes: Number(eta) || null,
       duration_minutes: Number(duration) || null,
       message: note || null,
@@ -584,15 +591,49 @@ function ProOrder() {
                 <p className="text-xs uppercase font-bold text-trust tracking-widest">
                   Seu orçamento
                 </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPricingType("fixed")}
+                    className={`h-10 rounded-xl text-sm font-semibold border ${pricingType === "fixed" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-muted-foreground"}`}
+                  >
+                    Valor fechado
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPricingType("range")}
+                    className={`h-10 rounded-xl text-sm font-semibold border ${pricingType === "range" ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border text-muted-foreground"}`}
+                  >
+                    Faixa de valor
+                  </button>
+                </div>
+                {pricingType === "range" && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Use quando o valor real só se confirma na execução (ex.: pode precisar de peça
+                    extra). O cliente paga o teto agora e recebe a diferença de volta
+                    automaticamente se o serviço custar menos.
+                  </p>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">R$</span>
                   <input
                     value={price}
                     onChange={(e) => setPrice(e.target.value.replace(/[^0-9.]/g, ""))}
-                    placeholder="Valor fechado"
+                    placeholder={pricingType === "range" ? "Valor mínimo" : "Valor fechado"}
                     className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-lg font-bold outline-none"
                   />
                 </div>
+                {pricingType === "range" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">R$</span>
+                    <input
+                      value={priceMax}
+                      onChange={(e) => setPriceMax(e.target.value.replace(/[^0-9.]/g, ""))}
+                      placeholder="Valor máximo"
+                      className="flex-1 h-11 px-3 rounded-xl bg-background border border-border text-lg font-bold outline-none"
+                    />
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Chega em (min)</span>
                   <input
