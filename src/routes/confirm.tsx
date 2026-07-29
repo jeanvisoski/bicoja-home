@@ -9,6 +9,32 @@ import { supabase } from "@/lib/supabase";
 
 type OrderPhoto = { id: string; kind: "antes" | "depois"; photo_url: string };
 
+const DISPUTE_CATEGORIES: { value: string; label: string }[] = [
+  { value: "servico_incompleto", label: "Serviço não foi concluído" },
+  { value: "servico_com_defeito", label: "Serviço com defeito ou mal feito" },
+  { value: "atraso_grave", label: "Atraso grave ou não compareceu" },
+  { value: "cobranca_indevida", label: "Cobrança fora do combinado" },
+  { value: "dano_material", label: "Causou dano material" },
+  { value: "conduta", label: "Comportamento inadequado" },
+  { value: "outro", label: "Outro motivo" },
+];
+
+function useDisputeResponseHours() {
+  return useQuery({
+    queryKey: ["dispute-response-hours"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("dispute_response_hours")
+        .eq("id", true)
+        .single();
+      if (error?.code === "42703") return 48;
+      if (error) throw error;
+      return data.dispute_response_hours as number;
+    },
+  });
+}
+
 type OrderForConfirmation = {
   id: string;
   status: string;
@@ -69,10 +95,12 @@ function Confirm() {
   const nav = useNavigate();
   const { data: photos = [] } = useOrderPhotos(orderId);
   const { data: order } = useOrderForConfirmation(orderId);
+  const { data: disputeResponseHours = 48 } = useDisputeResponseHours();
   const antes = photos.filter((p) => p.kind === "antes");
   const depois = photos.filter((p) => p.kind === "depois");
   const [confirming, setConfirming] = useState(false);
   const [reporting, setReporting] = useState(false);
+  const [disputeCategory, setDisputeCategory] = useState(DISPUTE_CATEGORIES[0].value);
   const [disputeReason, setDisputeReason] = useState("");
   const [sendingDispute, setSendingDispute] = useState(false);
   const [zoomedPhoto, setZoomedPhoto] = useState<string | null>(null);
@@ -116,13 +144,14 @@ function Confirm() {
       p_next_status: "em_disputa",
       p_final_price: null,
       p_note: disputeReason.trim(),
+      p_dispute_category: disputeCategory,
     });
     setSendingDispute(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Problema reportado. Nossa equipe vai mediar e entrar em contato.");
+    toast.success(`Problema reportado. Nossa equipe responde em até ${disputeResponseHours}h.`);
     nav({ to: "/orders" });
   }
 
@@ -275,12 +304,34 @@ function Confirm() {
       <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-background/0 pt-8 space-y-2">
         {reporting && (
           <div className="mb-2 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1">
+              O que aconteceu?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {DISPUTE_CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  onClick={() => setDisputeCategory(c.value)}
+                  className={`h-11 px-2 rounded-xl text-xs font-semibold border text-left leading-tight ${
+                    disputeCategory === c.value
+                      ? "bg-destructive text-destructive-foreground border-destructive"
+                      : "bg-card border-border text-muted-foreground"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
             <textarea
               value={disputeReason}
               onChange={(e) => setDisputeReason(e.target.value)}
               placeholder="Descreva o problema para nossa equipe mediar"
               className="w-full h-24 p-3 rounded-2xl bg-card border border-border text-sm resize-none outline-none"
             />
+            <p className="text-[11px] text-muted-foreground px-1">
+              Nossa equipe responde em até {disputeResponseHours}h.
+            </p>
             <button
               onClick={reportProblem}
               disabled={!disputeReason.trim() || sendingDispute}

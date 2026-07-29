@@ -62,7 +62,17 @@ function Terms() {
             Dados de contato e endereço são usados somente para viabilizar o atendimento.
             Informações do pedido são compartilhadas com as partes envolvidas e com a equipe de
             suporte quando necessário. Documentos de verificação de prestadores ficam restritos à
-            equipe autorizada.
+            equipe autorizada. Detalhes completos — o que coletamos, com quem compartilhamos e como
+            baixar ou excluir seus dados — estão na{" "}
+            <Link
+              to="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary font-semibold"
+            >
+              Política de Privacidade
+            </Link>
+            .
           </p>
         </Section>
         <Section title="6. Denúncias">
