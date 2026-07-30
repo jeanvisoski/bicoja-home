@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "app.bicoja.mobile",
-  appName: "bicojá",
+  appName: "BicoJá",
   webDir: "mobile-web",
   server: {
     // O frontend continua hospedado no Cloudflare. O shell nativo carrega a

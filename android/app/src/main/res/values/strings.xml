@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">bicojá</string>
-    <string name="title_activity_main">bicojá</string>
+    <string name="app_name">BicoJá</string>
+    <string name="title_activity_main">BicoJá</string>
     <string name="package_name">app.bicoja.mobile</string>
     <string name="custom_url_scheme">app.bicoja.mobile</string>
 </resources>
