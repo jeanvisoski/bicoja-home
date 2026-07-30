@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { isPushSupported, subscribeToPush } from "./push";
+import { isNativeApp } from "./native";
+import { primeLocationPermission, registerNativePush } from "./native-push";
 
 type SessionContextValue = {
   session: Session | null;
@@ -35,6 +37,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (!session?.user.id || !isPushSupported) return;
     if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
     void subscribeToPush(session.user.id);
+  }, [session?.user.id]);
+
+  // Prime as permissões nativas logo que uma sessão aparece, em vez de só
+  // pedir localização lá no meio do fluxo do prestador -- pedido explícito
+  // do Jean depois de publicar o primeiro .aab na Play Store: notificação
+  // nunca funcionou dentro do app empacotado (Web Push não é confiável em
+  // segundo plano fora do navegador) e localização só era pedida tarde
+  // demais. Roda só dentro do app nativo (Capacitor); no navegador/PWA os
+  // efeitos acima continuam sendo o caminho certo.
+  useEffect(() => {
+    if (!session?.user.id || !isNativeApp()) return;
+    void registerNativePush(session.user.id);
+    void primeLocationPermission();
   }, [session?.user.id]);
 
   useEffect(() => {

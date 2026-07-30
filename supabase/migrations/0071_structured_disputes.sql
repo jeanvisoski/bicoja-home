@@ -19,6 +19,15 @@ alter table public.platform_settings
 
 -- Mesma lógica de 0040, só trocando a categoria fixa 'conduta' por um
 -- parâmetro novo (com default 'outro' pra não quebrar chamadas antigas).
+--
+-- Importante: mudar a assinatura (5º parâmetro novo) faz o Postgres tratar
+-- isso como uma função DIFERENTE em vez de substituir a antiga -- "create or
+-- replace" só troca no lugar quando os tipos de parâmetro batem exatamente.
+-- Sem o drop abaixo, ficariam duas versões de transition_order (4 e 5
+-- argumentos) e toda chamada existente com 4 argumentos passaria a falhar
+-- com "function is not unique".
+drop function if exists public.transition_order(uuid, text, numeric, text);
+
 create or replace function public.transition_order(
   p_order_id uuid,
   p_next_status text,
