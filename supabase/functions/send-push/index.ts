@@ -25,8 +25,7 @@ const firebaseServiceAccountJson = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
 const firebaseProjectId = Deno.env.get("FIREBASE_PROJECT_ID") || "bicoja-3e9e3";
 
 function base64UrlEncode(data: ArrayBuffer | string): string {
-  const bytes =
-    typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
+  const bytes = typeof data === "string" ? new TextEncoder().encode(data) : new Uint8Array(data);
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
